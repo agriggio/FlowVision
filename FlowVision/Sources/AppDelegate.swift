@@ -33,7 +33,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var toggleIsShowHiddenFileMenuItem: NSMenuItem!
     @IBOutlet weak var toggleIsShowImageFileMenuItem: NSMenuItem!
     @IBOutlet weak var toggleIsShowRawFileMenuItem: NSMenuItem!
-    @IBOutlet weak var toggleIsRawFileUseThumbnail: NSMenuItem!
     @IBOutlet weak var toggleIsShowVideoFileMenuItem: NSMenuItem!
     @IBOutlet weak var toggleIsShowAllTypeFileMenuItem: NSMenuItem!
     @IBOutlet weak var deselectMenuItem: NSMenuItem!
@@ -520,7 +519,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             toggleIsShowAllTypeFileMenuItem.state = mainViewController.publicVar.isShowAllTypeFile ? .on : .off
             toggleIsShowImageFileMenuItem.state = mainViewController.publicVar.isShowImageFile ? .on : .off
             toggleIsShowRawFileMenuItem.state = mainViewController.publicVar.isShowRawFile ? .on : .off
-            toggleIsRawFileUseThumbnail.state = mainViewController.publicVar.isRawFileUseThumbnail ? .on : .off
             toggleIsShowVideoFileMenuItem.state = mainViewController.publicVar.isShowVideoFile ? .on : .off
             
             justifiedViewMenuItem.state = (mainViewController.publicVar.profile.layoutType == .justified) ? .on : .off
@@ -787,10 +785,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         getMainViewController()?.toggleIsShowRawFile()
     }
     
-    @IBAction func toggleIsRawFileUseThumbnail(_ sender: NSMenuItem){
-        getMainViewController()?.toggleIsRawFileUseThumbnail()
-    }
-
     @IBAction func toggleIsShowVideoFile(_ sender: NSMenuItem){
         getMainViewController()?.toggleIsShowVideoFile()
     }

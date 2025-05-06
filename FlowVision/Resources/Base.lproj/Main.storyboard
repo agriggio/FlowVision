@@ -707,13 +707,7 @@ Gw
                                         <menuItem title="Show Camera RAW Files" id="geW-lc-Njk">
                                             <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
-                                                <action selector="toggleIsShowRawFile:" target="Voe-Tx-rLC" id="hyI-z1-9f9"/>
-                                            </connections>
-                                        </menuItem>
-                                        <menuItem title="Use Embedded Thumbnail for Camera RAW Files" id="4O7-Du-qYd" userLabel="Use Embedded Thumbnail for Camera RAW Files">
-                                            <modifierMask key="keyEquivalentModifierMask"/>
-                                            <connections>
-                                                <action selector="toggleIsRawFileUseThumbnail:" target="Voe-Tx-rLC" id="C54-b1-fMF"/>
+                                                <action selector="toggleIsShowRawFile:" target="Voe-Tx-rLC" id="X8N-9P-LLi"/>
                                             </connections>
                                         </menuItem>
                                         <menuItem title="Show Video Files" id="UYl-gy-bK8">
@@ -897,7 +891,6 @@ Gw
                         <outlet property="switchToActualSizeMenuItem" destination="pzo-yf-TTx" id="DN8-BG-O7v"/>
                         <outlet property="switchToFitToWindowMenuItem" destination="d9h-3l-mAH" id="gda-Df-WtZ"/>
                         <outlet property="systemThemeMenuItem" destination="I6E-O3-RVP" id="AYN-qT-D7o"/>
-                        <outlet property="toggleIsRawFileUseThumbnail" destination="4O7-Du-qYd" id="nY3-ko-VSb"/>
                         <outlet property="toggleIsShowAllTypeFileMenuItem" destination="S31-Ni-z5u" id="0Tm-OY-l8R"/>
                         <outlet property="toggleIsShowHiddenFileMenuItem" destination="Tbh-PX-yFW" id="YS8-lw-tc2"/>
                         <outlet property="toggleIsShowImageFileMenuItem" destination="3W1-Yw-Gn8" id="h0V-QO-99K"/>
