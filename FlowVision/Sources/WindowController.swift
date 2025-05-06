@@ -1205,6 +1205,9 @@ extension WindowController: NSToolbarDelegate {
         
         let showRawFile = menu.addItem(withTitle: NSLocalizedString("Show Camera RAW Files", comment: "显示相机RAW文件"), action: #selector(showRawFileAction), keyEquivalent: "")
         showRawFile.state = (viewController.publicVar.isShowRawFile) ? .on : .off
+
+        let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
+        rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
         
         let showVideoFile = menu.addItem(withTitle: NSLocalizedString("Show Video Files", comment: "显示视频文件"), action: #selector(showVideoFileAction), keyEquivalent: "")
         showVideoFile.state = (viewController.publicVar.isShowVideoFile) ? .on : .off
@@ -1214,7 +1217,7 @@ extension WindowController: NSToolbarDelegate {
             showRawFile.isEnabled=false
             showVideoFile.isEnabled=false
         }
-        
+
         menu.addItem(NSMenuItem.separator())
 
         let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "g")
@@ -1470,6 +1473,11 @@ extension WindowController: NSToolbarDelegate {
         viewController.toggleIsShowRawFile()
     }
     
+    @objc func rawFileUseThumbnailAction(_ sender: NSMenuItem) {
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleIsRawFileUseThumbnail()
+    }
+
     @objc func showVideoFileAction(_ sender: NSMenuItem) {
         guard let viewController = contentViewController as? ViewController else {return}
         viewController.toggleIsShowVideoFile()
