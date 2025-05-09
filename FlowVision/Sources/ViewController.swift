@@ -7030,16 +7030,18 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         var initSuggestions: Bool = true
         
         override func keyUp(with event: NSEvent) {
-            switch event.keyCode {
-            case 48: // Tab key
-                handleTabKey()
-            default:
+            if event.keyCode == 48 /* Tab */
+                 || event.keyCode == 125 /* Arrow down */ {
+                doAutocomplete(reverse: false)
+            } else if event.keyCode == 126 /* Arrow up */ {
+                doAutocomplete(reverse: true)
+            } else {
                 initSuggestions = true
                 super.keyUp(with: event)
             }
         }
         
-        private func handleTabKey() {
+        private func doAutocomplete(reverse: Bool) {
             if initSuggestions {
                 suggestions = []
                 if let sidx = self.stringValue.lastIndex(of: "/") {
@@ -7056,7 +7058,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             
             // Cycle through suggestions
             currentSuggestionIndex = (currentSuggestionIndex + 1) % suggestions.count
-            self.stringValue = suggestions[currentSuggestionIndex]
+            if reverse {
+                self.stringValue = suggestions[suggestions.count - 1 - currentSuggestionIndex]
+            } else {
+                self.stringValue = suggestions[currentSuggestionIndex]
+            }
             moveCursor(to: self.stringValue.count)
         }
 
