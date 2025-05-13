@@ -191,13 +191,13 @@ class WindowController: NSWindowController, NSWindowDelegate {
                 hideTitleBar()
             }
         }else{
-            if location.y > window.frame.height - 20 {
+            if location.y > window.frame.height - 10 {
                 if toolbar.isVisible == false {
                     window.titlebarAppearsTransparent = false
                     toolbar.isVisible = true
                     viewController.largeImageView.determineBlackBg()
                 }
-            } else if window.styleMask.contains(.fullScreen) && (location.y < window.frame.height - 20) {
+            } else if window.styleMask.contains(.fullScreen) && (location.y < window.frame.height - 30) {
                 if toolbar.isVisible == true {
                     window.titlebarAppearsTransparent = true
                     toolbar.isVisible = false
@@ -1222,8 +1222,8 @@ extension WindowController: NSToolbarDelegate {
         
         menu.addItem(NSMenuItem.separator())
 
-        let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "g")
-        autoPlayVisibleVideo.keyEquivalentModifierMask = [.command, .shift]
+        let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "")
+        autoPlayVisibleVideo.keyEquivalentModifierMask = []
         autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
         autoPlayVisibleVideo.isEnabled = !viewController.publicVar.isInLargeView
 

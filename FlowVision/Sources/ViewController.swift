@@ -83,6 +83,9 @@ class CustomProfile: Codable {
         if dict[key] == nil && key == "isWindowTitleShowStatistics" {
             return "true"
         }
+        if dict[key] == nil && key == "dirTreeSortType" {
+            return String(SortType.pathA.rawValue)
+        }
         return dict[key]!
     }
 
@@ -414,11 +417,6 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         outlineView.setDraggingSourceOperationMask([.every], forLocal: true)  // 本地拖动操作
         outlineView.setDraggingSourceOperationMask([.every], forLocal: false) // 全局拖动操作
         outlineView.columnAutoresizingStyle = .noColumnAutoresizing
-        treeViewData.initData(path: treeRootFolder)
-        outlineView.reloadData()
-        DispatchQueue.main.async {
-            self.outlineViewManager.adjustColumnWidth()
-        }
         
         //初始化splitView
         splitView.delegate = self
@@ -498,11 +496,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         let theme=NSApp.effectiveAppearance.name
         if theme == .darkAqua {
             // 暗模式下的颜色
-            collectionView.layer?.backgroundColor = hexToNSColor(hex: "#212223").cgColor
+            collectionView.layer?.backgroundColor = hexToNSColor(hex: COLOR_COLLECTIONVIEW_BG_DARK).cgColor
             lastTheme = .darkAqua
         } else {
             // 光模式下的颜色
-            collectionView.layer?.backgroundColor = hexToNSColor(hex: "#FFFFFF").cgColor
+            collectionView.layer?.backgroundColor = hexToNSColor(hex: COLOR_COLLECTIONVIEW_BG_LIGHT).cgColor
             lastTheme = .aqua
         }
         
@@ -517,6 +515,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         
         mainScrollView.scrollerStyle = .legacy
         outlineScrollView.scrollerStyle = .legacy
+        
+        treeViewData.initData(path: treeRootFolder)
+        outlineView.reloadData()
+        DispatchQueue.main.async {
+            self.outlineViewManager.adjustColumnWidth()
+        }
         
         //=========以下是事件监听配置==========
         
@@ -782,13 +786,20 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                     return nil
                 }
+                
+                // 检查按键是否是 "Q"
+                if characters == "q" && noModifierKey {
+                    if publicVar.isInLargeView{
+                        largeImageView.actRotateL()
+                    }
+                    return nil
+                }
 
                 // 检查按键是否是 "E"
                 if characters == "e" && noModifierKey {
                     if publicVar.isInLargeView{
                         largeImageView.actRotateR()
                     }else{
-                        closeLargeImage(0)
                         switchDirByDirection(direction: .down_right, stackDeep: 0)
                     }
                     return nil
@@ -996,8 +1007,16 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
+                // 检查按键是否是 Alt + 回车、小键盘回车 键
+                if (specialKey == .carriageReturn || specialKey == .enter) && isOnlyAltPressed {
+                    if let window = view.window {
+                        window.toggleFullScreen(nil)
+                    }
+                    return nil
+                }
+                
                 // 检查按键是否是 F2、回车、小键盘回车 键
-                if specialKey == .f2 || (specialKey == .enter || specialKey == .carriageReturn || specialKey == .newline) {
+                if specialKey == .f2 || (specialKey == .carriageReturn || specialKey == .enter) {
                     if specialKey == .f2 || !globalVar.isEnterKeyToOpen {
                         //如果焦点在OutlineView
                         if publicVar.isOutlineViewFirstResponder{
@@ -1104,14 +1123,6 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
-                // 检查按键是否是 Command+Shift+"G" 键
-                if characters == "g" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
-                    if !publicVar.isInLargeView{
-                        toggleAutoPlayVisibleVideo()
-                        return nil
-                    }
-                }
-                
                 // 检查按键是否是 "U"
                 if characters == "u" && noModifierKey {
                     if publicVar.isInLargeView {
@@ -1153,7 +1164,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
-                // 检查按键是否是 ➡️⬇️PageDown 键
+                // 检查按键是否是 ➡️、⬇️、PageDown 键
                 if (specialKey == .rightArrow || specialKey == .downArrow || specialKey == .pageDown || specialKey == .next) && noModifierKey {
                     if publicVar.isInLargeView{
                         if largeImageView.file.type == .video && specialKey == .rightArrow {
@@ -1164,7 +1175,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         return nil
                     }
                 }
-                // 检查按键是否是 ⬅️⬆️PageUp 键
+                // 检查按键是否是 ⬅️、⬆️、PageUp 键
                 if (specialKey == .leftArrow || specialKey == .upArrow || specialKey == .pageUp || specialKey == .prev) && noModifierKey {
                     if publicVar.isInLargeView{
                         if largeImageView.file.type == .video && specialKey == .leftArrow {
@@ -1189,8 +1200,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
 
-                // 检查按键是否是 "⬅️➡️⬆️⬇️" 键
-                if (specialKey == .leftArrow || specialKey == .rightArrow || specialKey == .upArrow || specialKey == .downArrow) && (noModifierKey || isOnlyShiftPressed) {
+                // 检查按键是否是 "⬅️➡️⬆️⬇️" 或 Space/Enter 键
+                if (specialKey == .leftArrow || specialKey == .rightArrow || specialKey == .upArrow || specialKey == .downArrow || characters == " " || ((specialKey == .carriageReturn || specialKey == .enter) && globalVar.isEnterKeyToOpen))
+                    && (noModifierKey || isOnlyShiftPressed) {
                     if !publicVar.isInLargeView{
                         //如果焦点在OutlineView
                         if publicVar.isOutlineViewFirstResponder{
@@ -1202,21 +1214,21 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                         outlineView.selectRowIndexes(IndexSet(integer: previousRow), byExtendingSelection: false)
                                         outlineView.scrollRowToVisible(previousRow) // 可选：滚动视图以确保选中的项可见
                                     }
-                                }
-                                if specialKey == .downArrow {//⬇️
+                                } else if specialKey == .downArrow {//⬇️
                                     if selectedRow != -1 && selectedRow < outlineView.numberOfRows - 1 {
                                         let nextRow = selectedRow + 1
                                         outlineView.selectRowIndexes(IndexSet(integer: nextRow), byExtendingSelection: false)
                                         outlineView.scrollRowToVisible(nextRow) // 可选：滚动视图以确保选中的项可见
                                     }
-                                }
-                                if specialKey == .leftArrow || specialKey == .rightArrow {//⬅️➡️
+                                }else {//⬅️➡️、Space/Enter
                                     // 获取行对应的条目
                                     if let item = outlineView.item(atRow: selectedRow) {
-                                        if outlineView.isItemExpanded(item) {
-                                            outlineView.collapseItem(item)
-                                        } else {
-                                            outlineView.expandItem(item)
+                                        if outlineView.isExpandable(item) {
+                                            if outlineView.isItemExpanded(item) {
+                                                outlineView.collapseItem(item)
+                                            } else {
+                                                outlineView.expandItem(item)
+                                            }
                                         }
                                     }
                                 }
@@ -1228,38 +1240,40 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         if publicVar.isCollectionViewFirstResponder{
                             if let collectionView = collectionView,
                                let scrollView = collectionView.enclosingScrollView,
-                               !collectionView.selectionIndexPaths.isEmpty
+                               !collectionView.selectionIndexPaths.isEmpty //有选中项
                             {
-                                let sortedIndexPaths = collectionView.selectionIndexPaths.sorted()
-                                var currentIndexPath = sortedIndexPaths.first!
-                                if specialKey == .rightArrow || specialKey == .downArrow {
-                                    currentIndexPath = sortedIndexPaths.last!
+                                if specialKey == .leftArrow || specialKey == .rightArrow || specialKey == .upArrow || specialKey == .downArrow {
+                                    let sortedIndexPaths = collectionView.selectionIndexPaths.sorted()
+                                    var currentIndexPath = sortedIndexPaths.first!
+                                    if specialKey == .rightArrow || specialKey == .downArrow {
+                                        currentIndexPath = sortedIndexPaths.last!
+                                    }
+                                    
+                                    // 存储当前滚动位置，因为findClosestItem期间会多次滚动
+                                    let savedContentOffset = scrollView.contentView.bounds.origin
+                                    
+                                    var newIndexPath: IndexPath?
+                                    newIndexPath = findClosestItem(currentIndexPath: currentIndexPath, direction: specialKey)
+                                    
+                                    // 还原滚动位置
+                                    scrollView.contentView.setBoundsOrigin(savedContentOffset)
+                                    scrollView.reflectScrolledClipView(scrollView.contentView)
+                                    
+                                    if let newIndexPath = newIndexPath {
+                                        if !(isCommandKeyPressed() || isShiftKeyPressed()) {
+                                            collectionView.deselectAll(nil)
+                                        }
+                                        if let toSelect = collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [newIndexPath]) {
+                                            collectionView.scrollToItems(at: [newIndexPath], scrollPosition: .nearestHorizontalEdge)
+                                            //collectionView.reloadData()
+                                            collectionView.selectItems(at: toSelect, scrollPosition: [])
+                                            collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: toSelect)
+                                            setLoadThumbPriority(ifNeedVisable: true)
+                                        }
+                                    }
                                 }
 
-                                // 存储当前滚动位置，因为findClosestItem期间会多次滚动
-                                let savedContentOffset = scrollView.contentView.bounds.origin
-
-                                var newIndexPath: IndexPath?
-                                newIndexPath = findClosestItem(currentIndexPath: currentIndexPath, direction: specialKey)
-                                
-                                // 还原滚动位置
-                                scrollView.contentView.setBoundsOrigin(savedContentOffset)
-                                scrollView.reflectScrolledClipView(scrollView.contentView)
-                                
-                                if let newIndexPath = newIndexPath {
-                                    if !(isCommandKeyPressed() || isShiftKeyPressed()) {
-                                        collectionView.deselectAll(nil)
-                                    }
-                                    if let toSelect = collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [newIndexPath]) {
-                                        collectionView.scrollToItems(at: [newIndexPath], scrollPosition: .nearestHorizontalEdge)
-                                        //collectionView.reloadData()
-                                        collectionView.selectItems(at: toSelect, scrollPosition: [])
-                                        collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: toSelect)
-                                        setLoadThumbPriority(ifNeedVisable: true)
-                                    }
-                                }
-
-                            }else if let collectionView = collectionView {
+                            }else if let collectionView = collectionView { //无选中项
                                 
                                 var indexPaths = collectionView.indexPathsForVisibleItems()
 
@@ -1636,6 +1650,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if !doNotRefresh {
             refreshCollectionView(dryRun: true, needLoadThumbPriority: true)
         }
+    }
+
+    func changeDirSortType(sortType: SortType){
+        publicVar.profile.setValue(forKey: "dirTreeSortType", value: String(sortType.rawValue))
+        publicVar.profile.saveToUserDefaults(withKey: "CustomStyle_v2_current")
+        refreshTreeView()
     }
 
     func toggleSidebar(){
@@ -3310,10 +3330,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             let theme=NSApp.effectiveAppearance.name
             if theme == .darkAqua {
                 // 暗模式下的颜色
-                collectionView.layer?.backgroundColor = hexToNSColor(hex: "#212223").cgColor
+                collectionView.layer?.backgroundColor = hexToNSColor(hex: COLOR_COLLECTIONVIEW_BG_DARK).cgColor
             } else {
                 // 光模式下的颜色
-                collectionView.layer?.backgroundColor = hexToNSColor(hex: "#FFFFFF").cgColor
+                collectionView.layer?.backgroundColor = hexToNSColor(hex: COLOR_COLLECTIONVIEW_BG_LIGHT).cgColor
             }
             if(lastTheme != theme){
                 refreshAll(dryRun: true, needLoadThumbPriority: false)
@@ -5714,6 +5734,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         if !publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: 0.4, execute: false){
             _ = publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: -1)
+            return
+        }
+        
+        //屏蔽横向滚动
+        if abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) || abs(event.deltaX) > abs(event.deltaY) {
             return
         }
 
