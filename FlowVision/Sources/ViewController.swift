@@ -7051,18 +7051,18 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     suggestions = autocompleteFileSystem(path: pth, query: q)
                 }
                 initSuggestions = false
-                currentSuggestionIndex = -1
+                currentSuggestionIndex = reverse ? suggestions.count : -1
             }
             
             guard !suggestions.isEmpty else { return }
             
             // Cycle through suggestions
-            currentSuggestionIndex = (currentSuggestionIndex + 1) % suggestions.count
             if reverse {
-                self.stringValue = suggestions[suggestions.count - 1 - currentSuggestionIndex]
+                currentSuggestionIndex = currentSuggestionIndex > 0 ? currentSuggestionIndex - 1 : suggestions.count - 1
             } else {
-                self.stringValue = suggestions[currentSuggestionIndex]
+                currentSuggestionIndex = (currentSuggestionIndex + 1) % suggestions.count
             }
+            self.stringValue = suggestions[currentSuggestionIndex]
             moveCursor(to: self.stringValue.count)
         }
 
@@ -7093,7 +7093,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     
                     return false
                 }
-                return subdirs.map { path + $0 }
+                return (subdirs.map { path + $0 }).sorted()
             } catch {
                 print("Error reading directory contents: \(error)")
                 return []
