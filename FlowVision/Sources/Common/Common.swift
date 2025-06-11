@@ -398,6 +398,22 @@ func renameAlert(urls: [URL]) -> Bool {
         let newBaseName = inputTextField.stringValue
         
         if newBaseName != "" {
+
+            // 记录操作到日志
+            let sourceFiles = urls.map { url -> String in
+                return url.lastPathComponent
+            }
+            
+            let sourceFilesStr: String
+            if sourceFiles.count > 3 {
+                sourceFilesStr = sourceFiles[0...2].joined(separator: ", ") + "..."
+            } else {
+                sourceFilesStr = sourceFiles.joined(separator: ", ")
+            }
+            
+            let operationLog = "[Rename] \(sourceFilesStr) -> \(newBaseName)"
+            globalVar.operationLogs.append(operationLog)
+
             var allSuccess = true
             
             for (index, originalUrl) in urls.enumerated() {
@@ -436,6 +452,16 @@ func renameAlert(urls: [URL]) -> Bool {
                     }
                 }
             }
+            
+            // 针对递归模式处理
+            if let viewController = getMainViewController() {
+                if viewController.publicVar.isRecursiveMode {
+                    if viewController.fileDB.db[SortKeyDir(viewController.fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                        viewController.scheduledRefresh()
+                    }
+                }
+            }
+            
             return allSuccess
         }
     }
@@ -697,7 +723,7 @@ func captureSnapshot(of view: NSView) -> NSView? {
 
     // 将y坐标转换为从上到下
     if screenRect.origin.y == window.frame.origin.y {
-        if let screen = window.screen ?? NSScreen.main {
+        if let screen = NSScreen.screens.first {
             screenRect.origin.y = screen.frame.height - screenRect.origin.y - screenRect.height
         }
     }

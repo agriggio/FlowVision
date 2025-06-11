@@ -804,13 +804,13 @@ extension WindowController: NSToolbarDelegate {
     
     @objc func goBackAction(_ sender: Any?) {
         if let viewController = contentViewController as? ViewController {
-            viewController.switchDirByDirection(direction: .back, stackDeep: 0)
+            viewController.historyBack()
         }
     }
 
     @objc func goForwardAction(_ sender: Any?) {
         if let viewController = contentViewController as? ViewController {
-            viewController.switchDirByDirection(direction: .forward, stackDeep: 0)
+            viewController.historyForward()
         }
     }
 
@@ -1184,65 +1184,92 @@ extension WindowController: NSToolbarDelegate {
         
         let actionItemSettings = menu.addItem(withTitle: NSLocalizedString("Settings...", comment: "设置..."), action: #selector(settingsAction), keyEquivalent: ",")
         actionItemSettings.keyEquivalentModifierMask = [.command]
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        let customLayoutStyle = menu.addItem(withTitle: NSLocalizedString("Custom Layout Style...", comment: "自定义布局样式..."), action: #selector(customLayoutStyle), keyEquivalent: "")
-        customLayoutStyle.isEnabled = !viewController.publicVar.isInLargeView
 
-        menu.addItem(NSMenuItem.separator())
-        
-        let actionItemShowHiddenFile = menu.addItem(withTitle: NSLocalizedString("Show Hidden Files", comment: "显示隐藏文件"), action: #selector(showHiddenFileAction), keyEquivalent: ".")
-        actionItemShowHiddenFile.state = (viewController.publicVar.isShowHiddenFile) ? .on : .off
-        actionItemShowHiddenFile.keyEquivalentModifierMask = [.command, .shift]
-        
-        let showAllTypeFile = menu.addItem(withTitle: NSLocalizedString("Show All Types of Files", comment: "显示所有类型文件"), action: #selector(showAllTypeFileAction), keyEquivalent: ",")
-        showAllTypeFile.state = (viewController.publicVar.isShowAllTypeFile) ? .on : .off
-        showAllTypeFile.keyEquivalentModifierMask = [.command, .shift]
-        
-        let showImageFile = menu.addItem(withTitle: NSLocalizedString("Show Image Files", comment: "显示图像文件"), action: #selector(showImageFileAction), keyEquivalent: "")
-        showImageFile.state = (viewController.publicVar.isShowImageFile) ? .on : .off
-        
-        let showRawFile = menu.addItem(withTitle: NSLocalizedString("Show Camera RAW Files", comment: "显示相机RAW文件"), action: #selector(showRawFileAction), keyEquivalent: "")
-        showRawFile.state = (viewController.publicVar.isShowRawFile) ? .on : .off
+        if !viewController.publicVar.isInLargeView {
+            
+            menu.addItem(NSMenuItem.separator())
+            
+            let customLayoutStyle = menu.addItem(withTitle: NSLocalizedString("Custom Layout Style...", comment: "自定义布局样式..."), action: #selector(customLayoutStyle), keyEquivalent: "")
+            customLayoutStyle.isEnabled = !viewController.publicVar.isInLargeView
+            
+            menu.addItem(NSMenuItem.separator())
+            
+            let actionItemShowHiddenFile = menu.addItem(withTitle: NSLocalizedString("Show Hidden Files", comment: "显示隐藏文件"), action: #selector(showHiddenFileAction), keyEquivalent: ".")
+            actionItemShowHiddenFile.state = (viewController.publicVar.isShowHiddenFile) ? .on : .off
+            actionItemShowHiddenFile.keyEquivalentModifierMask = [.command, .shift]
+            
+            let showAllTypeFile = menu.addItem(withTitle: NSLocalizedString("Show All Types of Files", comment: "显示所有类型文件"), action: #selector(showAllTypeFileAction), keyEquivalent: ",")
+            showAllTypeFile.state = (viewController.publicVar.isShowAllTypeFile) ? .on : .off
+            showAllTypeFile.keyEquivalentModifierMask = [.command, .shift]
+            
+            let showImageFile = menu.addItem(withTitle: NSLocalizedString("Show Image Files", comment: "显示图像文件"), action: #selector(showImageFileAction), keyEquivalent: "")
+            showImageFile.state = (viewController.publicVar.isShowImageFile) ? .on : .off
+            
+            let showRawFile = menu.addItem(withTitle: NSLocalizedString("Show Camera RAW Files", comment: "显示相机RAW文件"), action: #selector(showRawFileAction), keyEquivalent: "")
+            showRawFile.state = (viewController.publicVar.isShowRawFile) ? .on : .off
+            
+            let showVideoFile = menu.addItem(withTitle: NSLocalizedString("Show Video Files", comment: "显示视频文件"), action: #selector(showVideoFileAction), keyEquivalent: "")
+            showVideoFile.state = (viewController.publicVar.isShowVideoFile) ? .on : .off
 
-        let showVideoFile = menu.addItem(withTitle: NSLocalizedString("Show Video Files", comment: "显示视频文件"), action: #selector(showVideoFileAction), keyEquivalent: "")
-        showVideoFile.state = (viewController.publicVar.isShowVideoFile) ? .on : .off
+            if viewController.publicVar.isShowAllTypeFile {
+                showImageFile.isEnabled=false
+                showRawFile.isEnabled=false
+                showVideoFile.isEnabled=false
+            }
+            
+            menu.addItem(NSMenuItem.separator())
+            let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
+            rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
+            
+            menu.addItem(NSMenuItem.separator())
+            let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "v")
+            autoPlayVisibleVideo.keyEquivalentModifierMask = [.command, .shift]
+            autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
+            autoPlayVisibleVideo.isEnabled = !viewController.publicVar.isInLargeView
 
-        if viewController.publicVar.isShowAllTypeFile {
-            showImageFile.isEnabled=false
-            showRawFile.isEnabled=false
-            showVideoFile.isEnabled=false
+            let useInternalPlayer = menu.addItem(withTitle: NSLocalizedString("Use Internal Video Player", comment: "使用内置视频播放器"), action: #selector(toggleUseInternalPlayer), keyEquivalent: "")
+            useInternalPlayer.state = globalVar.useInternalPlayer ? .on : .off
+
+            let videoPlayInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(videoPlayInfo), keyEquivalent: "")
+            
+            menu.addItem(NSMenuItem.separator())
+
+            let recursiveMode = menu.addItem(withTitle: NSLocalizedString("Recursive Mode", comment: "递归浏览模式"), action: #selector(toggleRecursiveMode), keyEquivalent: "r")
+            recursiveMode.keyEquivalentModifierMask = [.command, .shift]
+            recursiveMode.state = (viewController.publicVar.isRecursiveMode) ? .on : .off
+
+            let recursiveContainFolder = menu.addItem(withTitle: NSLocalizedString("Include Folders", comment: "包含文件夹"), action: #selector(toggleRecursiveContainFolder), keyEquivalent: "f")
+            recursiveContainFolder.keyEquivalentModifierMask = [.command, .shift]
+            recursiveContainFolder.state = (viewController.publicVar.isRecursiveContainFolder) ? .on : .off
+            
+            let recursiveModeInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(recursiveModeInfo), keyEquivalent: "")
+            
+        } else {
+            
+            menu.addItem(NSMenuItem.separator())
+            
+            let lockRotation = menu.addItem(withTitle: NSLocalizedString("Lock Rotation", comment: "锁定旋转"), action: #selector(toggleLockRotation), keyEquivalent: "")
+            lockRotation.keyEquivalentModifierMask = []
+            lockRotation.state = viewController.publicVar.isRotationLocked ? .on : .off
+            
+            let lockZoom = menu.addItem(withTitle: NSLocalizedString("Lock Zoom", comment: "锁定缩放"), action: #selector(toggleLockZoom), keyEquivalent: "")
+            lockZoom.keyEquivalentModifierMask = []
+            lockZoom.state = viewController.publicVar.isZoomLocked ? .on : .off
+            
+            menu.addItem(NSMenuItem.separator())
+            
+            let panWhenZoomed = menu.addItem(withTitle: NSLocalizedString("pan-zoom", comment: "(放大后滚动变为平移)"), action: #selector(togglePanWhenZoomed), keyEquivalent: "")
+            panWhenZoomed.keyEquivalentModifierMask = []
+            panWhenZoomed.state = viewController.publicVar.isPanWhenZoomed ? .on : .off
+            
+            let panZoomInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(panZoomInfo), keyEquivalent: "")
+            
+//            let customZoomRatio = menu.addItem(withTitle: NSLocalizedString("Custom Zoom Ratio...", comment: "自定义缩放比例..."), action: #selector(showCustomZoomRatioDialog), keyEquivalent: "")
+//            customZoomRatio.keyEquivalentModifierMask = []
+//            
+//            let customZoomStep = menu.addItem(withTitle: NSLocalizedString("Custom Zoom Step...", comment: "自定义缩放梯度..."), action: #selector(showCustomZoomStepDialog), keyEquivalent: "")
+//            customZoomStep.keyEquivalentModifierMask = []
         }
-
-        menu.addItem(NSMenuItem.separator())
-
-        let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
-        rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
-        
-        menu.addItem(NSMenuItem.separator())
-
-        let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "")
-        autoPlayVisibleVideo.keyEquivalentModifierMask = []
-        autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
-        autoPlayVisibleVideo.isEnabled = !viewController.publicVar.isInLargeView
-
-        let useInternalPlayer = menu.addItem(withTitle: NSLocalizedString("Use Internal Video Player", comment: "使用内置视频播放器"), action: #selector(toggleUseInternalPlayer), keyEquivalent: "")
-        useInternalPlayer.state = globalVar.useInternalPlayer ? .on : .off
-
-        let videoPlayInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(videoPlayInfo), keyEquivalent: "")
-        
-        menu.addItem(NSMenuItem.separator())
-
-        let recursiveMode = menu.addItem(withTitle: NSLocalizedString("Recursive Mode", comment: "递归浏览模式"), action: #selector(toggleRecursiveMode), keyEquivalent: "r")
-        recursiveMode.keyEquivalentModifierMask = [.command, .shift]
-        recursiveMode.state = (viewController.publicVar.isRecursiveMode) ? .on : .off
-
-        let recursiveContainFolder = menu.addItem(withTitle: NSLocalizedString("Include Folders", comment: "包含文件夹"), action: #selector(toggleRecursiveContainFolder), keyEquivalent: "t")
-        recursiveContainFolder.keyEquivalentModifierMask = [.command, .shift]
-        recursiveContainFolder.state = (viewController.publicVar.isRecursiveContainFolder) ? .on : .off
-        
-        let recursiveModeInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(recursiveModeInfo), keyEquivalent: "")
         
         menu.addItem(NSMenuItem.separator())
         
@@ -1288,14 +1315,17 @@ extension WindowController: NSToolbarDelegate {
         adjustWindowActual.isEnabled = (viewController.publicVar.isInLargeView)
         adjustWindowCurrent.isEnabled = (viewController.publicVar.isInLargeView)
         
-        menu.addItem(NSMenuItem.separator())
-        
-        let switchToActualSize = menu.addItem(withTitle: NSLocalizedString("switchToActualSize", comment: "图片默认实际大小"), action: #selector(switchToActualSize), keyEquivalent: "")
-        
-        let switchToFitToWindow = menu.addItem(withTitle: NSLocalizedString("switchToFitToWindow", comment: "图片默认适应窗口"), action: #selector(switchToFitToWindow), keyEquivalent: "")
-        
-        switchToActualSize.state = (viewController.publicVar.isLargeImageFitWindow == false) ? .on : .off
-        switchToFitToWindow.state = (viewController.publicVar.isLargeImageFitWindow == true) ? .on : .off
+        if viewController.publicVar.isInLargeView {
+            
+            menu.addItem(NSMenuItem.separator())
+            
+            let switchToActualSize = menu.addItem(withTitle: NSLocalizedString("switchToActualSize", comment: "图片默认实际大小"), action: #selector(switchToActualSize), keyEquivalent: "")
+            
+            let switchToFitToWindow = menu.addItem(withTitle: NSLocalizedString("switchToFitToWindow", comment: "图片默认适应窗口"), action: #selector(switchToFitToWindow), keyEquivalent: "")
+            
+            switchToActualSize.state = (viewController.publicVar.isLargeImageFitWindow == false) ? .on : .off
+            switchToFitToWindow.state = (viewController.publicVar.isLargeImageFitWindow == true) ? .on : .off
+        }
 
         menu.addItem(NSMenuItem.separator())
         
@@ -1336,6 +1366,36 @@ extension WindowController: NSToolbarDelegate {
             viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, forceRefresh: true)
         }
     }
+
+    @objc func toggleLockRotation(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleLockRotation()
+    }
+
+    @objc func toggleLockZoom(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleLockZoom()
+    }
+
+    @objc func showCustomZoomRatioDialog(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.showCustomZoomRatioDialog()
+    }
+    
+    @objc func showCustomZoomStepDialog(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.showCustomZoomStepDialog()
+    }
+    
+    @objc func panZoomInfo(_ sender: NSMenuItem){
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("pan-zoom-info", comment: "对于缩放后平移的说明..."), width: 300)
+    }
+    
+    @objc func togglePanWhenZoomed(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.togglePanWhenZoomed()
+    }
+    
     
     @objc func maximizeWindow(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}

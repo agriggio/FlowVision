@@ -36,6 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var toggleIsShowVideoFileMenuItem: NSMenuItem!
     @IBOutlet weak var toggleIsShowAllTypeFileMenuItem: NSMenuItem!
     @IBOutlet weak var deselectMenuItem: NSMenuItem!
+    @IBOutlet weak var reopenClosedTabsMenuItem: NSMenuItem!
     
     var commonParentPath=""
     
@@ -485,6 +486,20 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         
         if menu == historyMenu {
             historyMenu.removeAllItems()
+
+            //返回、前进
+            let backMenuItem = NSMenuItem(title: NSLocalizedString("Go Back", comment: "后退"), action: #selector(historyBack(_:)), keyEquivalent: "[")
+            backMenuItem.keyEquivalentModifierMask=[.command]
+            backMenuItem.target = self
+            historyMenu.addItem(backMenuItem)
+            
+            let forwardMenuItem = NSMenuItem(title: NSLocalizedString("Go Forward", comment: "前进"), action: #selector(historyForward(_:)), keyEquivalent: "]")
+            forwardMenuItem.keyEquivalentModifierMask=[.command]
+            forwardMenuItem.target = self
+            historyMenu.addItem(forwardMenuItem)
+
+            historyMenu.addItem(NSMenuItem.separator())
+
             if mainViewController.publicVar.folderStepStack.count > 0 {
                 for item in mainViewController.publicVar.folderStepStack {
                     let menuItem = NSMenuItem(title: item.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!, action: #selector(pathClick(_:)), keyEquivalent: "")
@@ -568,6 +583,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         //新建标签页限制最大窗口数量
         if menuItem.action == #selector(fileNewTab(_:)) && isWindowNumMax() {
             return false
+        }
+        //重新打开关闭的标签页
+        if menuItem.action == #selector(reopenClosedTabs(_:)) {
+            if globalVar.closedPaths.isEmpty {
+                return false
+            }else{
+                return true
+            }
+        }
+        //返回、前进
+        if menuItem.action == #selector(historyBack(_:)) {
+            if (mainViewController.publicVar.folderStepStack.count > 0) && (!mainViewController.publicVar.isInLargeView) {
+                return true
+            }else{
+                return false
+            }
+        }
+        if menuItem.action == #selector(historyForward(_:)) {
+            if (mainViewController.publicVar.folderStepForwardStack.count > 0) && (!mainViewController.publicVar.isInLargeView) {
+                return true
+            }else{
+                return false
+            }
         }
         //根据图片大小调整窗口
         if menuItem.action == #selector(adjustWindowActual(_:)) || menuItem.action == #selector(adjustWindowCurrent(_:)) {
@@ -706,6 +744,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         //menuNeedsUpdate(favoritesMenu)
     }
     
+    @IBAction func editOperationLogs(_ sender: NSMenuItem){
+        getMainViewController()?.showOperationLogs()
+    }
+    
     @IBAction func editMove(_ sender: NSMenuItem){
         getMainViewController()?.handleMove()
     }
@@ -747,12 +789,24 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             }
         }
     }
+
+    @IBAction func historyBack(_ sender: NSMenuItem){
+        getMainViewController()?.historyBack()
+    }
+    
+    @IBAction func historyForward(_ sender: NSMenuItem){
+        getMainViewController()?.historyForward()
+    }
     
     @IBAction func fileNewTab(_ sender: NSMenuItem){
         getMainViewController()?.fileDB.lock()
         let curFolder = getMainViewController()?.fileDB.curFolder
         getMainViewController()?.fileDB.unlock()
         createNewWindow(curFolder)
+    }
+
+    @IBAction func reopenClosedTabs(_ sender: NSMenuItem){
+        getMainViewController()?.reopenClosedTabs()
     }
     
     @IBAction func fileNewFolder(_ sender: NSMenuItem){

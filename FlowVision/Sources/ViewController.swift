@@ -131,6 +131,13 @@ class PublicVar{
     var isPreferInternalThumb = false
     var isEnableHDR = true
     var autoPlayVisibleVideo = false
+    var isRotationLocked = false
+    var rotationLock = 0
+    var isZoomLocked = false
+    var zoomLock: Double? = nil
+    var isPanWhenZoomed = false
+    var customZoomRatio: Double = 1.0
+    var customZoomStep: Double = 0.1
 
     //可一键切换的配置
     var profile = CustomProfile()
@@ -364,6 +371,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     private var searchField: NSSearchField?
     private var searchOverlay: SearchOverlayView?
     
+    var dirURLCache: [URL] = []
+    var dirURLCacheParameters: Any = []
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -466,6 +476,15 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         if let autoPlayVisibleVideo = UserDefaults.standard.value(forKey: "autoPlayVisibleVideo") as? Bool {
             publicVar.autoPlayVisibleVideo = autoPlayVisibleVideo
+        }
+        if let isRotationLocked = UserDefaults.standard.value(forKey: "isRotationLocked") as? Bool {
+            publicVar.isRotationLocked = isRotationLocked
+        }
+        if let isZoomLocked = UserDefaults.standard.value(forKey: "isZoomLocked") as? Bool {
+            publicVar.isZoomLocked = isZoomLocked
+        }
+        if let isPanWhenZoomed = UserDefaults.standard.value(forKey: "isPanWhenZoomed") as? Bool {
+            publicVar.isPanWhenZoomed = isPanWhenZoomed
         }
         if #available(macOS 14.0, *) {
             //
@@ -715,12 +734,17 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         return nil
                     }
                 }
-                // 检查按键是否是 Command+Shift+"T" 键
-                if characters == "t" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
+                // 检查按键是否是 Command+Shift+"F" 键
+                if characters == "f" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
                     if !publicVar.isInLargeView{
                         toggleRecursiveContainFolder()
                         return nil
                     }
+                }
+                // 检查按键是否是 Command+Shift+"T" 键
+                if characters == "t" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
+                    reopenClosedTabs()
+                    return nil
                 }
                 // 检查按键是否是 F3 键
                 if specialKey == .f3 {
@@ -764,12 +788,14 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     return nil
                 }
 
+                // 检查按键是否是 "Z" 键
                 if characters == "z" && noModifierKey {
                     if publicVar.isInLargeView{
                         largeImageView.zoom100()
                     }
                 }
 
+                // 检查按键是否是 "X" 键
                 if characters == "x" && noModifierKey {
                     if publicVar.isInLargeView{
                         largeImageView.zoomFit()
@@ -857,21 +883,13 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
                 
                 // 检查按键是否是 Cmd + "R" / F5 键
-                if (characters == "r" && isCommandPressed) || specialKey == .f5 {
-                    if publicVar.isInLargeView{
-                        LargeImageProcessor.clearCache()
-                        largeImageView.actRefresh()
-                        return nil
-                    }else{
-                        LargeImageProcessor.clearCache()
-                        ThumbImageProcessor.clearCache()
-                        refreshAll([.all], needLoadThumbPriority: true)
-                        return nil
-                    }
+                if (characters == "r" && isOnlyCommandPressed) || specialKey == .f5 {
+                    handleUserRefresh()
+                    return nil
                 }
                 
                 // 检查按键是否是 Command+[ 键
-                if characters == "[" && isCommandPressed {
+                if characters == "[" && isOnlyCommandPressed {
                     if !publicVar.isInLargeView{
                         switchDirByDirection(direction: .back, stackDeep: 0)
                     }
@@ -879,11 +897,27 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
                 
                 // 检查按键是否是 Command+] 键
-                if characters == "]" && isCommandPressed {
+                if characters == "]" && isOnlyCommandPressed {
                     if !publicVar.isInLargeView{
                         switchDirByDirection(direction: .forward, stackDeep: 0)
                     }
                     return nil
+                }
+                
+                // 检查按键是否是 Command+Shift+"N" 键
+                if characters == "n" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
+                    if !publicVar.isInLargeView{
+                        _ = handleNewFolder()
+                        return nil
+                    }
+                }
+
+                // 检查按键是否是 Command+Shift+"V" 键
+                if characters == "v" && isCommandPressed && !isAltPressed && !isCtrlPressed && isShiftPressed {
+                    if !publicVar.isInLargeView{
+                        toggleAutoPlayVisibleVideo()
+                        return nil
+                    }
                 }
                 
                 // 检查按键是否是 Command+⬅️➡️ 键
@@ -1016,7 +1050,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
                 
                 // 检查按键是否是 F2、回车、小键盘回车 键
-                if specialKey == .f2 || (specialKey == .carriageReturn || specialKey == .enter) {
+                if (specialKey == .f2 || specialKey == .carriageReturn || specialKey == .enter) && noModifierKey {
                     if specialKey == .f2 || !globalVar.isEnterKeyToOpen {
                         //如果焦点在OutlineView
                         if publicVar.isOutlineViewFirstResponder{
@@ -1288,10 +1322,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                 }
                                 let sortedIndexPaths = indexPaths.sorted { $0.item < $1.item }
                                 
-                                if let newIndexPath = sortedIndexPaths.first{
+                                if let newIndexPath = sortedIndexPaths.first,
+                                   let toSelect = collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [newIndexPath]) {
                                     collectionView.scrollToItems(at: [newIndexPath], scrollPosition: .nearestHorizontalEdge)
                                     //collectionView.reloadData()
-                                    collectionView.selectItems(at: [newIndexPath], scrollPosition: [])
+                                    collectionView.selectItems(at: toSelect, scrollPosition: [])
                                     collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [newIndexPath])
                                     setLoadThumbPriority(ifNeedVisable: true)
                                 }
@@ -1495,6 +1530,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         // 在这里执行清理工作
         log("ViewController is being deinitialized")
         
+        //存储关闭的目录
+        globalVar.closedPaths.append(fileDB.curFolder)
+        
+        // 移除事件观察者
         if let eventMonitorKeyDown = eventMonitorKeyDown {
             NSEvent.removeMonitor(eventMonitorKeyDown)
         }
@@ -1596,7 +1635,24 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         //启动后台任务线程
         startBackgroundTaskThread()
     }
-    
+
+    func reopenClosedTabs(){
+        if let lastPath = globalVar.closedPaths.last {
+            globalVar.closedPaths.removeLast()
+            if let appDelegate=NSApplication.shared.delegate as? AppDelegate {
+                _ = appDelegate.createNewWindow(lastPath)
+            }
+        }
+    }
+
+    func historyBack(){
+        switchDirByDirection(direction: .back, stackDeep: 0)
+    }
+
+    func historyForward(){
+        switchDirByDirection(direction: .forward, stackDeep: 0)
+    }
+
     func handlePrint(){
         if publicVar.isInLargeView {
             printContent(largeImageView.imageView)
@@ -1702,7 +1758,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     
     func adjustWindowSuitable(){
         if globalVar.portableMode {
+            var zoomLockStore = publicVar.isZoomLocked
+            publicVar.isZoomLocked = false
             adjustWindowPortable(firstShowThumb: false, animate: true, isToCenter: true)
+            publicVar.isZoomLocked = zoomLockStore
+            largeImageView.calcRatio(isShowPrompt: true)
         }else{
             adjustWindowToRatio(animate: true, isToCenter: true)
         }
@@ -1714,7 +1774,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         var tmpSize=largeImageView.file.originalSize ?? NSSize(width: 800, height: 600)
         if refSize != nil {tmpSize=refSize!}
         tmpSize = NSSize(width: tmpSize.width/scale, height: tmpSize.height/scale)
+        var zoomLockStore = publicVar.isZoomLocked
+        publicVar.isZoomLocked = false
         adjustWindowTo(tmpSize, firstShowThumb: firstShowThumb, animate: animate, justAdjustWindowFrame: false, isToCenter: false)
+        publicVar.isZoomLocked = zoomLockStore
+        largeImageView.calcRatio(isShowPrompt: true)
     }
     
     func adjustWindowImageCurrent(){
@@ -1733,13 +1797,17 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 
     func adjustWindowPortable(refSize:NSSize? = nil, firstShowThumb: Bool, animate: Bool, justAdjustWindowFrame: Bool = false, isToCenter: Bool = false) {
         if publicVar.isInLargeView {
-            let scale = NSScreen.main?.backingScaleFactor ?? 1
+            var scale = NSScreen.main?.backingScaleFactor ?? 1.0
+            if publicVar.isZoomLocked,
+               let zoomLock = publicVar.zoomLock {
+                scale = scale / zoomLock
+            }
             var tmpSize = largeImageView.file.originalSize
             if refSize != nil {tmpSize=refSize}
             if tmpSize == nil {tmpSize=NSSize(width: 400, height: 400)}
             tmpSize = NSSize(width: tmpSize!.width/scale, height: tmpSize!.height/scale)
             
-            if publicVar.isLargeImageFitWindow{
+            if publicVar.isLargeImageFitWindow && !publicVar.isZoomLocked {
                 adjustWindowToImageRatio(refSize: tmpSize, firstShowThumb: firstShowThumb, animate: animate, justAdjustWindowFrame: justAdjustWindowFrame, isToCenter: isToCenter)
             }else{
                 adjustWindowTo(tmpSize!, firstShowThumb: firstShowThumb, animate: false, justAdjustWindowFrame: justAdjustWindowFrame, isToCenter: isToCenter)
@@ -1837,6 +1905,35 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         UserDefaults.standard.set(publicVar.isShowVideoFile, forKey: "isShowVideoFile")
         publicVar.setFileExtensions()
         refreshCollectionView(needLoadThumbPriority: true)
+    }
+
+    func togglePanWhenZoomed(){
+        publicVar.isPanWhenZoomed.toggle()
+        UserDefaults.standard.set(publicVar.isPanWhenZoomed, forKey: "isPanWhenZoomed")
+    }
+
+    func toggleLockRotation(){
+        publicVar.isRotationLocked.toggle()
+        UserDefaults.standard.set(publicVar.isRotationLocked, forKey: "isRotationLocked")
+        if publicVar.isRotationLocked {
+            publicVar.rotationLock = largeImageView.file.rotate
+        }
+    }
+
+    func toggleLockZoom(){
+        publicVar.isZoomLocked.toggle()
+        UserDefaults.standard.set(publicVar.isZoomLocked, forKey: "isZoomLocked")
+        if publicVar.isZoomLocked {
+            largeImageView.calcRatio(isShowPrompt: true)
+        }
+    }
+    
+    func showCustomZoomRatioDialog(){
+        
+    }
+    
+    func showCustomZoomStepDialog(){
+        
     }
     
     func adjustWindowToCenter(animate: Bool = true) {
@@ -2433,10 +2530,13 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         guard urls.count != 0 else {return false}
         
         let ifHasPermission = requestAppleEventsPermission()
+        let isShiftPressed = isShiftKeyPressed()
         
         let alert = NSAlert()
         alert.messageText = NSLocalizedString("Delete", comment: "删除")
-        if VolumeManager.shared.isExternalVolume(urls.first!) {
+        if isShiftPressed {
+            alert.informativeText = NSLocalizedString("ask-to-delete-shift", comment: "你确定要将这些文件永久删除吗？此操作无法撤销。")
+        }else if VolumeManager.shared.isExternalVolume(urls.first!) {
             alert.informativeText = NSLocalizedString("ask-to-delete-external", comment: "此目录不支持移动到废纸篓。将立即删除这些项目，此操作无法撤销。")
         }else{
             if ifHasPermission{
@@ -2470,49 +2570,72 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     log("文件不存在: \(url.path)")
                 }
             }
+
+            // 记录操作到日志
+            var sourceFiles = urlsToDelete.map { url -> String in
+                return url.lastPathComponent
+            }
+            
+            let sourceFilesStr: String
+            if sourceFiles.count > 3 {
+                sourceFilesStr = sourceFiles[0...2].joined(separator: ", ") + "..."
+            } else {
+                sourceFilesStr = sourceFiles.joined(separator: ", ")
+            }
+            
+            let operationLog = "[Delete] \(sourceFilesStr)"
+            globalVar.operationLogs.append(operationLog)
             
             if !urlsToDelete.isEmpty {
-                var appleScriptURLs = ""
-                for url in urlsToDelete {
-                    appleScriptURLs += "\"\(url.path)\" as POSIX file, "
-                }
-                
-                // Remove the trailing comma and space
-                if appleScriptURLs.hasSuffix(", ") {
-                    appleScriptURLs = String(appleScriptURLs.dropLast(2))
-                }
-                
-                let script = """
-                        tell application "Finder"
-                            move { \(appleScriptURLs) } to trash
-                        end tell
-                        """
-                
-                var error: NSDictionary?
-                if let scriptObject = NSAppleScript(source: script) {
-                    // 文件更改计数
-                    publicVar.fileChangedCount += 1
+                if isShiftPressed { //永久删除
+                    for url in urlsToDelete {
+                        try? fileManager.removeItem(at: url)
+                    }
+                } else { //删除到回收站
+                    var appleScriptURLs = ""
+                    for url in urlsToDelete {
+                        appleScriptURLs += "\"\(url.path)\" as POSIX file, "
+                    }
                     
-                    scriptObject.executeAndReturnError(&error)
-                    if let error = error, let errorCode = error[NSAppleScript.errorNumber] as? Int, errorCode == -1743 {
-                        // AppleScript 无权限，回退到 NSWorkspace.shared.recycle
-                        NSWorkspace.shared.recycle(urlsToDelete, completionHandler: { (newURLs, error) in
-                            if let error = error {
-                                log("删除失败: \(error)")
-                            } else {
-                                log("文件已移动到废纸篓")
-                            }
-                        })
-                    } else if let error = error {
-                        log("删除失败: \(error)")
-                    } else {
-                        log("文件已移动到废纸篓")
+                    // Remove the trailing comma and space
+                    if appleScriptURLs.hasSuffix(", ") {
+                        appleScriptURLs = String(appleScriptURLs.dropLast(2))
+                    }
+                    
+                    let script = """
+                            tell application "Finder"
+                                move { \(appleScriptURLs) } to trash
+                            end tell
+                            """
+                    
+                    var error: NSDictionary?
+                    if let scriptObject = NSAppleScript(source: script) {
+                        scriptObject.executeAndReturnError(&error)
+                        if let error = error, let errorCode = error[NSAppleScript.errorNumber] as? Int, errorCode == -1743 {
+                            // AppleScript 无权限，回退到 NSWorkspace.shared.recycle
+                            NSWorkspace.shared.recycle(urlsToDelete, completionHandler: { (newURLs, error) in
+                                if let error = error {
+                                    log("删除失败: \(error)")
+                                } else {
+                                    log("文件已移动到废纸篓")
+                                }
+                            })
+                        } else if let error = error {
+                            log("删除失败: \(error)")
+                        } else {
+                            log("文件已移动到废纸篓")
+                        }
                     }
                 }
                 
+                // 文件更改计数
+                publicVar.fileChangedCount += 1
+
                 // 针对递归模式处理
                 if publicVar.isRecursiveMode {
-                    scheduledRefresh()
+                    if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                        scheduledRefresh()
+                    }
                 }
                 
             } else {
@@ -2893,9 +3016,34 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 return
             }
         }
+
+        // 记录操作到日志
+        var sourceFiles = items.compactMap { item -> String? in
+            guard let fileURL = URL(string: item.string(forType: .fileURL) ?? "") else { return nil }
+            return fileURL.lastPathComponent
+        }
+        
+        let sourceFilesStr: String
+        if sourceFiles.count > 3 {
+            sourceFilesStr = sourceFiles[0...2].joined(separator: ", ") + "..."
+        } else {
+            sourceFilesStr = sourceFiles.joined(separator: ", ")
+        }
+        
+        let operationLog = "[Paste] \(sourceFilesStr) -> \(destinationURL.lastPathComponent)"
+        globalVar.operationLogs.append(operationLog)
         
         //播放提示音
         triggerFinderSound()
+        
+        // 针对递归模式处理
+        defer {
+            if publicVar.isRecursiveMode {
+                if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                    scheduledRefresh()
+                }
+            }
+        }
         
         var shouldReplaceAll = false
         var shouldSkipAll = false
@@ -3048,8 +3196,33 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
         }
         
+        // 记录操作到日志
+        var sourceFiles = items.compactMap { item -> String? in
+            guard let fileURL = URL(string: item.string(forType: .fileURL) ?? "") else { return nil }
+            return fileURL.lastPathComponent
+        }
+        
+        let sourceFilesStr: String
+        if sourceFiles.count > 3 {
+            sourceFilesStr = sourceFiles[0...2].joined(separator: ", ") + "..."
+        } else {
+            sourceFilesStr = sourceFiles.joined(separator: ", ")
+        }
+        
+        let operationLog = "[Move] \(sourceFilesStr) -> \(destinationURL.lastPathComponent)"
+        globalVar.operationLogs.append(operationLog)
+        
         //播放提示音
         triggerFinderSound()
+        
+        // 针对递归模式处理
+        defer {
+            if publicVar.isRecursiveMode {
+                if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                    scheduledRefresh()
+                }
+            }
+        }
         
         var shouldReplaceAll = false
         var shouldSkipAll = false
@@ -3121,6 +3294,17 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
         }
         publicVar.isKeyEventEnabled = StoreIsKeyEventEnabled
+    }
+    
+    func showOperationLogs() {
+        var text = ""
+        for log in globalVar.operationLogs.reversed() {
+            text += "\(log)\n"
+        }
+        if globalVar.operationLogs.isEmpty {
+            text = NSLocalizedString("operation-logs-info", comment: "(对操作日志的说明)")
+        }
+        showInformationLong(title: NSLocalizedString("Operation Logs", comment: "操作日志"), message: text)
     }
 
     func getUniqueDestinationURL(for url: URL, isInPlace: Bool = false) -> URL {
@@ -3339,6 +3523,17 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 refreshAll(dryRun: true, needLoadThumbPriority: false)
             }
             lastTheme=theme
+        }
+    }
+    
+    func handleUserRefresh(){
+        if publicVar.isInLargeView{
+            largeImageView.actRefresh()
+        }else{
+            LargeImageProcessor.clearCache()
+            ThumbImageProcessor.clearCache()
+            dirURLCache.removeAll()
+            refreshAll([.all], needLoadThumbPriority: true)
         }
     }
     
@@ -4142,11 +4337,22 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         if !skip {
             do {
-                if publicVar.isRecursiveMode {
-                    scanFiles(at: folderURL, contents: &contents, properties: properties)
-                }else{
-                    contents = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: properties, options: [])
+                let curDirURLCacheParameters = (folderURL, publicVar.isRecursiveMode, publicVar.isShowHiddenFile, publicVar.isRecursiveContainFolder, properties)
+                if let dirURLCacheParameters = dirURLCacheParameters as? (URL, Bool, Bool, Bool, [URLResourceKey]) {
+                    if dirURLCacheParameters != curDirURLCacheParameters {
+                        dirURLCache.removeAll()
+                    }
                 }
+                dirURLCacheParameters = curDirURLCacheParameters
+                
+                if dirURLCache.isEmpty {
+                    if publicVar.isRecursiveMode {
+                        scanFiles(at: folderURL, contents: &dirURLCache, properties: properties)
+                    }else{
+                        dirURLCache = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: properties, options: [])
+                    }
+                }
+                contents.append(contentsOf: dirURLCache)
             }catch{}
         }
         
@@ -4542,7 +4748,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         fileDB.unlock()
         
         //如果是切换目录或者文件数量过多，则清空后再insertItems，否则仅reloadData(保持位置)
-        if lastCurFolder != path || fileNum > 5000 || fileDB.db[SortKeyDir(path)]?.keepScrollPos == false {
+        if lastCurFolder != path || fileNum > RESET_VIEW_FILE_NUM_THRESHOLD || fileDB.db[SortKeyDir(path)]?.keepScrollPos == false {
             //必须按顺序执行以下两句，否则频繁切换目录时会出现异常
             collectionView.reloadData() //重载清空
             collectionView.numberOfItems(inSection:0)
@@ -4983,7 +5189,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                                     let indexPath=IndexPath(item: offset, section: 0)
                                                     collectionView.scrollToItems(at: [indexPath], scrollPosition: .nearestHorizontalEdge)
                                                     collectionView.reloadData()
+                                                    collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
                                                     collectionView.selectItems(at: [indexPath], scrollPosition: [])
+                                                    collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
                                                     setLoadThumbPriority(ifNeedVisable: true)
                                                     
                                                 }
@@ -5624,8 +5832,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
 
             collectionView.reloadData()
-            collectionView.selectItems(at: [indexPath], scrollPosition: [])
             collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
+            collectionView.selectItems(at: [indexPath], scrollPosition: [])
             collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
             setLoadThumbPriority(ifNeedVisable: true)
         }
@@ -5708,9 +5916,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     //选中打开的项目
                     collectionView.deselectAll(nil)
                     let indexPath=IndexPath(item: currLargeImagePos, section: 0)
+                    collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
                     collectionView.selectItems(at: [indexPath], scrollPosition: [])
                     collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
-
                 }
             }
         }
@@ -5720,15 +5928,33 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         //log("触控板:",event.scrollingDeltaY,event.scrollingDeltaX)
         //log("滚轮的:",event.deltaY)
         
+        // 滚动缩放在
         if largeImageView.isHidden {return}
+        
+        // 滚动滚轮或者双指操作触控板来移动图像
+        if publicVar.isPanWhenZoomed && !publicVar.isLeftMouseDown && !publicVar.isRightMouseDown {
+            let isTrackPad = abs(event.scrollingDeltaY)+abs(event.scrollingDeltaX) > abs(event.deltaY)
+            if largeImageView.imageView.frame.height > largeImageView.frame.height || (isTrackPad && largeImageView.imageView.frame.width > largeImageView.frame.width) {
+                if isTrackPad {
+                    largeImageView.imageView.frame.origin.x += event.scrollingDeltaX
+                    largeImageView.imageView.frame.origin.y -= event.scrollingDeltaY
+                } else {
+                    largeImageView.imageView.frame.origin.x += event.deltaX * 10
+                    largeImageView.imageView.frame.origin.y -= event.deltaY * 10
+                }
+                return
+            }
+        }
+        
+        // 屏蔽惯性阶段的滚动
         if event.momentumPhase == .changed
             && event.timestamp - lastScrollSwitchLargeImageTime > 0.2
         {
             return
         }
         
-        //以下是防止按住鼠标缩放后松开，滚轮惯性滚动造成切换
-        if publicVar.isRightMouseDown || publicVar.isLeftMouseDown {
+        // 以下是防止按住鼠标缩放后松开，滚轮惯性滚动造成切换
+        if publicVar.isRightMouseDown {
             _ = publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: -1)
             return
         }
@@ -5737,14 +5963,14 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             return
         }
         
-        //屏蔽横向滚动
+        // 屏蔽横向滚动
         if abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) || abs(event.deltaX) > abs(event.deltaY) {
             return
         }
 
         var deltaY=0.0
         if abs(event.scrollingDeltaY)+abs(event.scrollingDeltaX) > abs(event.deltaY) {
-            //通常是触控板事件
+            // 通常是触控板事件
             var sign = 1.0
             var absv = 1.0
             if abs(event.scrollingDeltaY) >= abs(event.scrollingDeltaX) {
@@ -5757,9 +5983,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             if absv == 1.0 {absv=0.1}
             deltaY=sign*pow(absv,1.0/1.4)/3
         }else{
-            //通常是滚轮事件
+            // 通常是滚轮事件
             deltaY=event.deltaY
-            //没有使用LineMouse时
+            // 没有使用LineMouse时
             if abs(deltaY) < 1.5 {
                 deltaY = 1.5 * deltaY / abs(deltaY)
             }
@@ -5839,7 +6065,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         fileDB.unlock()
         
         if ifFoundNextImage {
-            //复原旋转
+            //复原之前图片的旋转
             largeImageView.file.rotate=0
             
             currLargeImagePos=nextLargeImagePos
@@ -5865,6 +6091,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             collectionView.deselectAll(nil)
             if currLargeImagePos < collectionView.numberOfItems(inSection: 0) {
                 let indexPath=IndexPath(item: currLargeImagePos, section: 0)
+                collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
                 collectionView.selectItems(at: [indexPath], scrollPosition: [])
                 collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
             }
@@ -6114,7 +6341,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
     }
     
-    func changeLargeImage(firstShowThumb: Bool = true, resetSize: Bool = true, triggeredByLongPress: Bool = false, justChangeLargeImageViewFile: Bool = false, forceRefresh: Bool = false){
+    func changeLargeImage(firstShowThumb: Bool = true, resetSize: Bool = true, triggeredByLongPress: Bool = false, justChangeLargeImageViewFile: Bool = false, forceRefresh: Bool = false, isByZoom: Bool = false){
         let pos=currLargeImagePos
         var file=FileModel(path: "", ver: 0)
         var isThisFromFinder=false
@@ -6155,6 +6382,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 // 预载入附近图像（包括本张），此处对于便携模式计算似乎有一像素小数偏差，待完善
                 preloadLargeImage()
             }
+        }
+        
+        //旋转锁定
+        if publicVar.isRotationLocked {
+            file.rotate = publicVar.rotationLock
         }
         
         largeImageView.file=file
@@ -6225,7 +6457,13 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 largeSize=NSSize(width: originalSize.width/scale, height: originalSize.height/scale)
             }
             
-            if resetSize{
+            //缩放锁定
+            if !isByZoom && publicVar.isZoomLocked,
+               let ratio = publicVar.zoomLock {
+                largeSize=NSSize(width: originalSize.width/scale*ratio, height: originalSize.height/scale*ratio)
+            }
+            
+            if resetSize { //resetSize则在此处调整frame，否则在largeImageView中调整
                 let rectView=largeImageView.frame
                 let rectImage=NSRect(origin: CGPoint(x: (rectView.width-largeSize.width)/2, y: (rectView.height-largeSize.height)/2), size: largeSize)
                 largeImageView.imageView.frame=rectImage
@@ -6457,6 +6695,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             guard let self = self else { return }
             folderMonitorTimer?.invalidate()
             folderMonitorTimer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] _ in
+                self?.dirURLCache.removeAll()
                 self?.refreshAll(needStopAutoScroll: false, needLoadThumbPriority: true)
             }
         }
@@ -7176,7 +7415,15 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         path = String(path.dropFirst().dropLast())
                     }
                     // 解码URL编码
-                    path = path.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!
+                    guard var path = path.replacingOccurrences(of: "file://", with: "").removingPercentEncoding else {
+                        coreAreaView.showInfo(NSLocalizedString("Invalid current path", comment: "当前路径无效"), timeOut: 2, cannotBeCleard: false)
+                        return
+                    }
+                    
+                    //替换连续双斜杠
+                    while path.contains("//") {
+                        path = path.replacingOccurrences(of: "//", with: "/")
+                    }
 
                     // 检查路径是否为空
                     if path.isEmpty {
@@ -7498,7 +7745,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         collectionView.deselectAll(nil)
                         collectionView.scrollToItems(at: [indexPath], scrollPosition: .nearestHorizontalEdge)
                         collectionView.reloadData()
+                        collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
                         collectionView.selectItems(at: [indexPath], scrollPosition: [])
+                        collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
                         setLoadThumbPriority(ifNeedVisable: true)
                         return true
                     }
@@ -7533,7 +7782,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 collectionView.deselectAll(nil)
                 collectionView.scrollToItems(at: [indexPath], scrollPosition: .nearestHorizontalEdge)
                 collectionView.reloadData()
+                collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
                 collectionView.selectItems(at: [indexPath], scrollPosition: [])
+                collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
                 setLoadThumbPriority(ifNeedVisable: true)
                 return true
             }

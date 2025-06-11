@@ -15,13 +15,14 @@ let OPEN_LARGEIMAGE_DURATION = 0.1
 var THUMB_SIZES = [Int]()
 let PRELOAD_THUMB_RANGE_PRE = 20
 let PRELOAD_THUMB_RANGE_NEXT = 40
+let RESET_VIEW_FILE_NUM_THRESHOLD = 5000
 
 let OFFICIAL_WEBSITE = "https://flowvision.app"
 
 let ROOT_NAME = getSystemVolumeName() ?? "Macintosh HD"
 
 let COLOR_COLLECTIONVIEW_BG_LIGHT = "#FFFFFF"
-let COLOR_COLLECTIONVIEW_BG_DARK = "#212223"
+let COLOR_COLLECTIONVIEW_BG_DARK = "#2D2D2D"
 
 class GlobalVar{
     var myFavoritesArray = ["/"]
@@ -29,6 +30,8 @@ class GlobalVar{
     var windowNum=0
     var randomSeed = Int.random(in: 0...Int.max)
     var toolbarIndex = 0
+    var operationLogs: [String] = []
+    var closedPaths: [String] = []
     
     //TODO: 临时公用状态变量
     var isLaunchFromFile = false
