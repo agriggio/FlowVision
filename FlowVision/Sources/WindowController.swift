@@ -1219,10 +1219,6 @@ extension WindowController: NSToolbarDelegate {
             }
             
             menu.addItem(NSMenuItem.separator())
-            let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
-            rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
-            
-            menu.addItem(NSMenuItem.separator())
             let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "v")
             autoPlayVisibleVideo.keyEquivalentModifierMask = [.command, .shift]
             autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
@@ -1282,6 +1278,9 @@ extension WindowController: NSToolbarDelegate {
         
         menu.addItem(NSMenuItem.separator())
 
+        let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
+        rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
+            
         var autoScrollMenuText = NSLocalizedString("Enable Automatic Scroll", comment: "启用自动滚动")
         if viewController.autoScrollTimer != nil {
             autoScrollMenuText = NSLocalizedString("Disable Automatic Scroll", comment: "停止自动滚动")
