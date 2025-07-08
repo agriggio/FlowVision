@@ -290,8 +290,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     var searchFolderRound=0
     
 #if DEBUG
-    var rootFolder="file://\(homeDirectory)/RepoData/ImageViewerPlus/"
-    var treeRootFolder="file://\(homeDirectory)/RepoData/ImageViewerPlus/"
+    var rootFolder="file://\(homeDirectory)/Repository/XcodeProj/%5BTestData%5D/ImageViewerPlus/"
+    var treeRootFolder="file://\(homeDirectory)/Repository/XcodeProj/%5BTestData%5D/ImageViewerPlus/"
     
 //    var rootFolder="file:///"
 //    var treeRootFolder="root"
@@ -966,7 +966,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     return nil
                 }
                 
-                // 检查按键是否是 Alt+⬆️ 键
+                // 检查按键是否是 Opt+⬆️ 键
                 if (specialKey == .upArrow && isOnlyAltPressed) || (specialKey == .pageUp && noModifierKey) {
                     if !publicVar.isInLargeView{
                         if let scrollView = collectionView.enclosingScrollView {
@@ -990,7 +990,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
 
                 
-                // 检查按键是否是 Alt+⬇️ 键
+                // 检查按键是否是 Opt+⬇️ 键
                 if (specialKey == .downArrow && isOnlyAltPressed) || (specialKey == .pageDown && noModifierKey) {
                     if !publicVar.isInLargeView{
                         if let scrollView = collectionView.enclosingScrollView {
@@ -1041,7 +1041,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
-                // 检查按键是否是 Alt + 回车、小键盘回车 键
+                // 检查按键是否是 Opt + 回车、小键盘回车 键
                 if (specialKey == .carriageReturn || specialKey == .enter) && isOnlyAltPressed {
                     if let window = view.window {
                         window.toggleFullScreen(nil)
@@ -1141,7 +1141,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
-                // 检查按键是否是 Alt+1~9 键
+                // 检查按键是否是 Opt+1~9 键
                 if (["1","2","3","4","5","6","7","8","9"].contains(characters)) && isOnlyAltPressed {
                     if !publicVar.isInLargeView {
                         useCustomProfile(characters)
@@ -1149,7 +1149,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
                 
-                // 检查按键是否是 Cmd+Alt+1~9 键
+                // 检查按键是否是 Cmd+Opt+1~9 键
                 if (["1","2","3","4","5","6","7","8","9"].contains(characters)) && isCommandPressed && isAltPressed && !isCtrlPressed && !isShiftPressed {
                     if !publicVar.isInLargeView {
                         setCustomProfileTo(characters)
@@ -1530,8 +1530,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         // 在这里执行清理工作
         log("ViewController is being deinitialized")
         
-        //存储关闭的目录
-        globalVar.closedPaths.append(fileDB.curFolder)
+        //存储关闭的目录/文件
+        if publicVar.isInLargeView {
+            globalVar.closedPaths.append(largeImageView.file.path)
+        } else {
+            globalVar.closedPaths.append(fileDB.curFolder)
+        }
         
         // 移除事件观察者
         if let eventMonitorKeyDown = eventMonitorKeyDown {
@@ -1640,7 +1644,14 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if let lastPath = globalVar.closedPaths.last {
             globalVar.closedPaths.removeLast()
             if let appDelegate=NSApplication.shared.delegate as? AppDelegate {
-                _ = appDelegate.createNewWindow(lastPath)
+                if lastPath.hasSuffix("/") {
+                    _ = appDelegate.createNewWindow(lastPath)
+                } else {
+                    globalVar.isLaunchFromFile=true
+                    if let windowController = appDelegate.createNewWindow(lastPath) {
+                        appDelegate.openImageInTargetWindow(lastPath, windowController: windowController)
+                    }
+                }
             }
         }
     }
@@ -5942,6 +5953,23 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     largeImageView.imageView.frame.origin.x += event.deltaX * 10
                     largeImageView.imageView.frame.origin.y -= event.deltaY * 10
                 }
+                // 限制图片不能完全移出视野范围
+                let imageFrame = largeImageView.imageView.frame
+                let viewFrame = largeImageView.frame
+                
+                // 检查是否完全超出视野
+                if imageFrame.maxX < 0 {
+                    largeImageView.imageView.frame.origin.x = -imageFrame.width
+                }
+                if imageFrame.minX > viewFrame.width {
+                    largeImageView.imageView.frame.origin.x = viewFrame.width
+                }
+                if imageFrame.maxY < 0 {
+                    largeImageView.imageView.frame.origin.y = -imageFrame.height
+                }
+                if imageFrame.minY > viewFrame.height {
+                    largeImageView.imageView.frame.origin.y = viewFrame.height
+                }
                 return
             }
         }
@@ -5954,7 +5982,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         
         // 以下是防止按住鼠标缩放后松开，滚轮惯性滚动造成切换
-        if publicVar.isRightMouseDown {
+        if publicVar.isRightMouseDown || publicVar.isLeftMouseDown {
             _ = publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: -1)
             return
         }
@@ -7059,7 +7087,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         alert.alertStyle = .informational
         
         let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        inputTextField.stringValue = "100"
+        inputTextField.stringValue = "80"
         alert.accessoryView = inputTextField
         
         alert.addButton(withTitle: NSLocalizedString("OK", comment: "确定"))
@@ -7165,7 +7193,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         alert.alertStyle = .informational
         
         let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        inputTextField.stringValue = "1"
+        inputTextField.stringValue = "2"
         alert.accessoryView = inputTextField
         alert.addButton(withTitle: NSLocalizedString("OK", comment: "确定"))
         alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "取消"))
@@ -7939,7 +7967,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 _ = performSearch(searchText: quickSearchText, isEnterKey: false, forceUseRegex: false, firstMatch: true)
             }
         }
-        coreAreaView.showInfo(NSLocalizedString("Quick Search", comment: "快速搜索")+": "+quickSearchText, timeOut: 1.8, cannotBeCleard: true)
+        coreAreaView.showInfo(NSLocalizedString("Quick Search", comment: "快速搜索")+": "+quickSearchText, timeOut: 1.8, duration: 0.1, cannotBeCleard: true)
         
         if !publicVar.isCollectionViewFirstResponder {
             view.window?.makeFirstResponder(collectionView)
