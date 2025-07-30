@@ -19,7 +19,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         
         self.window?.delegate = self
         
-        window?.title = "FlowVision"
+        window?.title = ""
 
         if let window = self.window {
             // 设置标题栏和工具栏合并效果
@@ -77,7 +77,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
     func saveWindowState() {
         guard let window = self.window else { return }
         if let viewController = contentViewController as? ViewController {
-            if viewController.publicVar.isInLargeView || window.styleMask.contains(.fullScreen) {
+            if (viewController.publicVar.isInLargeView && globalVar.portableMode) || window.styleMask.contains(.fullScreen) {
                 return
             }
         }
@@ -278,7 +278,10 @@ extension WindowController: NSToolbarDelegate {
             if viewController.publicVar.isInLargeView {
                 identifiers.append(.windowTitle)
                 if #available(macOS 14.0, *) {
-                    if viewController.largeImageView.file.imageInfo?.isHDR ?? false {
+                    let file = viewController.largeImageView.file
+                    if let isHDR = file.imageInfo?.isHDR,
+                       isHDR,
+                       !(globalVar.HandledRawExtensions.contains(file.ext.lowercased()) && viewController.publicVar.isRawUseEmbeddedThumb) {
                         identifiers.append(.isEnableHDR)
                     }
                 }
@@ -393,7 +396,9 @@ extension WindowController: NSToolbarDelegate {
             let font = NSFont.systemFont(ofSize: 13, weight: .regular)
             
             if let viewController = contentViewController as? ViewController {
+                viewController.fileDB.lock()
                 let curFolder = viewController.fileDB.curFolder
+                viewController.fileDB.unlock()
                 var pathString = curFolder.replacingOccurrences(of: "file:///", with: "")
                 if pathString.hasPrefix("/") {
                     pathString.removeFirst()
@@ -1186,7 +1191,7 @@ extension WindowController: NSToolbarDelegate {
         let actionItemSettings = menu.addItem(withTitle: NSLocalizedString("Settings...", comment: "设置..."), action: #selector(settingsAction), keyEquivalent: ",")
         actionItemSettings.keyEquivalentModifierMask = [.command]
 
-        if !viewController.publicVar.isInLargeView {
+        if !viewController.publicVar.isInLargeView { // 文件夹视图
             
             menu.addItem(NSMenuItem.separator())
             
@@ -1241,7 +1246,7 @@ extension WindowController: NSToolbarDelegate {
             
             let recursiveModeInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(recursiveModeInfo), keyEquivalent: "")
             
-        } else {
+        } else { // 大图视图
             
             menu.addItem(NSMenuItem.separator())
             
@@ -1266,6 +1271,15 @@ extension WindowController: NSToolbarDelegate {
 //            
 //            let customZoomStep = menu.addItem(withTitle: NSLocalizedString("Custom Zoom Step...", comment: "自定义缩放梯度..."), action: #selector(showCustomZoomStepDialog), keyEquivalent: "")
 //            customZoomStep.keyEquivalentModifierMask = []
+
+            menu.addItem(NSMenuItem.separator())
+
+            let rawUseEmbeddedThumb = menu.addItem(withTitle: NSLocalizedString("RAW Uses Exif Embedded Thumbnail", comment: "RAW使用Exif内嵌缩略图"), action: #selector(toggleRawUseEmbeddedThumb), keyEquivalent: "")
+            rawUseEmbeddedThumb.keyEquivalentModifierMask = []
+            rawUseEmbeddedThumb.state = viewController.publicVar.isRawUseEmbeddedThumb ? .on : .off
+
+            let rawUseEmbeddedThumbInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(rawUseEmbeddedThumbInfo), keyEquivalent: "")
+
         }
         
         menu.addItem(NSMenuItem.separator())
@@ -1278,11 +1292,6 @@ extension WindowController: NSToolbarDelegate {
         
         menu.addItem(NSMenuItem.separator())
 
-        if viewController.publicVar.isInLargeView {        
-            let rawFileUseThumbnail = menu.addItem(withTitle: NSLocalizedString("Use Embedded Thumbnail for Camera RAW Files", comment: ""), action: #selector(rawFileUseThumbnailAction), keyEquivalent: "")
-            rawFileUseThumbnail.state = (viewController.publicVar.isRawFileUseThumbnail) ? .on : .off
-        }
-            
         var autoScrollMenuText = NSLocalizedString("Enable Automatic Scroll", comment: "启用自动滚动")
         if viewController.autoScrollTimer != nil {
             autoScrollMenuText = NSLocalizedString("Disable Automatic Scroll", comment: "停止自动滚动")
@@ -1398,6 +1407,14 @@ extension WindowController: NSToolbarDelegate {
         viewController.togglePanWhenZoomed()
     }
     
+    @objc func toggleRawUseEmbeddedThumb(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleRawUseEmbeddedThumb()
+    }
+
+    @objc func rawUseEmbeddedThumbInfo(_ sender: NSMenuItem){
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("raw-use-embeded-info", comment: "raw使用exif内嵌缩略图替代浏览的说明..."), width: 300)
+    }
     
     @objc func maximizeWindow(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
@@ -1537,11 +1554,6 @@ extension WindowController: NSToolbarDelegate {
         viewController.toggleIsShowRawFile()
     }
     
-    @objc func rawFileUseThumbnailAction(_ sender: NSMenuItem) {
-        guard let viewController = contentViewController as? ViewController else {return}
-        viewController.toggleIsRawFileUseThumbnail()
-    }
-
     @objc func showVideoFileAction(_ sender: NSMenuItem) {
         guard let viewController = contentViewController as? ViewController else {return}
         viewController.toggleIsShowVideoFile()

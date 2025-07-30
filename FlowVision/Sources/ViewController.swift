@@ -77,6 +77,9 @@ class CustomProfile: Codable {
         if dict[key] == nil && key == "isShowThumbnailBadge" {
             return "true"
         }
+        if dict[key] == nil && key == "isShowThumbnailTag" {
+            return "true"
+        }
         if dict[key] == nil && key == "isWindowTitleUseFullPath" {
             return "true"
         }
@@ -118,6 +121,7 @@ class PublicVar{
     weak var refView: NSView!
     weak var viewController: ViewController!
 
+    var randomSeed = Int.random(in: 0...Int.max)
     var isLargeImageFitWindow = true
     var isRecursiveMode = false
     var isRecursiveContainFolder = false
@@ -130,6 +134,7 @@ class PublicVar{
     var isGenHdThumb = false
     var isPreferInternalThumb = false
     var isEnableHDR = true
+    var isRawUseEmbeddedThumb = false
     var autoPlayVisibleVideo = false
     var isRotationLocked = false
     var rotationLock = 0
@@ -138,11 +143,12 @@ class PublicVar{
     var isPanWhenZoomed = false
     var customZoomRatio: Double = 1.0
     var customZoomStep: Double = 0.1
+    var currentTag:String? = nil
 
     //可一键切换的配置
     var profile = CustomProfile()
     
-    var toolbarTitle = "FlowVision"
+    var toolbarTitle = ""
     var titleStatisticInfo = ""
     var isKeyEventEnabled = true
     var folderStepStack = [String]() {
@@ -471,6 +477,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if let isEnableHDR = UserDefaults.standard.value(forKey: "isEnableHDR") as? Bool {
             publicVar.isEnableHDR = isEnableHDR
         }
+        if let isRawUseEmbeddedThumb = UserDefaults.standard.value(forKey: "isRawUseEmbeddedThumb") as? Bool {
+            publicVar.isRawUseEmbeddedThumb = isRawUseEmbeddedThumb
+        }
         if let isRecursiveContainFolder = UserDefaults.standard.value(forKey: "isRecursiveContainFolder") as? Bool {
             publicVar.isRecursiveContainFolder = isRecursiveContainFolder
         }
@@ -485,6 +494,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         if let isPanWhenZoomed = UserDefaults.standard.value(forKey: "isPanWhenZoomed") as? Bool {
             publicVar.isPanWhenZoomed = isPanWhenZoomed
+        }
+        if let currentTag = UserDefaults.standard.value(forKey: "currentTag") as? String {
+            publicVar.currentTag = currentTag
         }
         if #available(macOS 14.0, *) {
             //
@@ -1408,6 +1420,15 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         return nil
                     }
                 }
+                
+                // 检查按键是否是 "B" 键
+//                if characters == "b" && noModifierKey {
+//                    //如果焦点在CollectionView
+//                    if publicVar.isCollectionViewFirstResponder{
+//                        handleTagging()
+//                        return nil
+//                    }
+//                }
 
             }
             
@@ -1618,6 +1639,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if globalVar.isLaunchFromFile == false { //从文件夹启动
             let defaults = UserDefaults.standard
             var lastFolder = defaults.string(forKey: "lastFolder")
+            if !globalVar.openLastFolder  {
+                if let appDelegate=NSApplication.shared.delegate as? AppDelegate,
+                   appDelegate.windowControllers.count == 1 {
+                    lastFolder = globalVar.homeFolder
+                }
+            }
             if lastFolder == nil {
                 lastFolder = rootFolder
             }
@@ -1709,9 +1736,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         publicVar.profile.isSortFolderFirst = isSortFolderFirst
         publicVar.profile.isSortUseFullPath = isSortUseFullPath
         publicVar.profile.saveToUserDefaults(withKey: "CustomStyle_v2_current")
-        globalVar.randomSeed = Int.random(in: 0...Int.max)
+        publicVar.randomSeed = Int.random(in: 0...Int.max)
         for dirModel in fileDB.db {
-            dirModel.1.changeSortType(publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)
+            dirModel.1.changeSortType(publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)
         }
         fileDB.unlock()
         if !doNotRefresh {
@@ -1902,15 +1929,6 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         refreshCollectionView(needLoadThumbPriority: true)
     }
 
-    func toggleIsRawFileUseThumbnail(){
-        publicVar.isRawFileUseThumbnail.toggle()
-        UserDefaults.standard.set(publicVar.isRawFileUseThumbnail, forKey: "isRawFileUseThumbnail")
-        publicVar.setFileExtensions()
-        globalVar.rawFileUseThumbnail = publicVar.isRawFileUseThumbnail
-        LargeImageProcessor.clearCache() 
-        refreshCollectionView([.all], dryRun: true, needLoadThumbPriority: false)
-   }
-    
     func toggleIsShowVideoFile(){
         publicVar.isShowVideoFile.toggle()
         UserDefaults.standard.set(publicVar.isShowVideoFile, forKey: "isShowVideoFile")
@@ -1936,6 +1954,20 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         UserDefaults.standard.set(publicVar.isZoomLocked, forKey: "isZoomLocked")
         if publicVar.isZoomLocked {
             largeImageView.calcRatio(isShowPrompt: true)
+        }
+    }
+
+    func toggleRawUseEmbeddedThumb(){
+        publicVar.isRawUseEmbeddedThumb.toggle()
+        UserDefaults.standard.set(publicVar.isRawUseEmbeddedThumb, forKey: "isRawUseEmbeddedThumb")
+        if publicVar.isRawUseEmbeddedThumb {
+            coreAreaView.showInfo(NSLocalizedString("RAW Uses Exif Embedded Thumbnail", comment: "RAW使用Exif内嵌缩略图"), timeOut: 1.0, cannotBeCleard: true)
+        }else{
+            coreAreaView.showInfo(NSLocalizedString("Render Original RAW", comment: "渲染原始RAW"), timeOut: 1.0, cannotBeCleard: true)
+        }
+        if publicVar.isInLargeView {
+            changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, forceRefresh: true)
+            publicVar.updateToolbar()
         }
     }
     
@@ -2644,7 +2676,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 
                 // 针对递归模式处理
                 if publicVar.isRecursiveMode {
-                    if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                    fileDB.lock()
+                    let ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    fileDB.unlock()
+                    if ifRefresh {
                         scheduledRefresh()
                     }
                 }
@@ -2956,6 +2991,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     }
     
     func handleCopyToDownload() {
+        if publicVar.selectedUrls().isEmpty {return}
+        
         // 备份剪贴板内容
         let backupItems = backupPasteboard()
         
@@ -3045,19 +3082,31 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         globalVar.operationLogs.append(operationLog)
         
         //播放提示音
-        triggerFinderSound()
+        var changeCount = 0
+        defer {
+            if changeCount > 0 {
+                triggerFinderSound()
+            }
+        }
         
         // 针对递归模式处理
+        var currentFolderChangeCount = 0
         defer {
             if publicVar.isRecursiveMode {
-                if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
-                    scheduledRefresh()
+                if currentFolderChangeCount > 0 {
+                    fileDB.lock()
+                    let ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    fileDB.unlock()
+                    if ifRefresh {
+                        scheduledRefresh()
+                    }
                 }
             }
         }
         
         var shouldReplaceAll = false
         var shouldSkipAll = false
+        var shouldAutoRenameAll = false
         
         let StoreIsKeyEventEnabled = publicVar.isKeyEventEnabled
         publicVar.isKeyEventEnabled = false
@@ -3070,14 +3119,19 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
             
             // 如果是在同一目录复制粘贴，则修改名称
-            if fileURL.deletingLastPathComponent() == destinationURL {
+            var isInSameFolder = fileURL.deletingLastPathComponent() == destinationURL
+            if isInSameFolder {
                 destURL = getUniqueDestinationURL(for: destURL, isInPlace: true)
             }
             
             if FileManager.default.fileExists(atPath: destURL.path) {
                 if shouldReplaceAll {
                     do {
-                        publicVar.fileChangedCount += 1
+                        changeCount += 1
+                        if isInSameFolder {
+                            currentFolderChangeCount += 1
+                            publicVar.fileChangedCount += 1
+                        }
                         try FileManager.default.removeItem(at: destURL)
                         try FileManager.default.copyItem(at: fileURL, to: destURL)
                     } catch {
@@ -3085,12 +3139,28 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 } else if shouldSkipAll {
                     continue
+                } else if shouldAutoRenameAll {
+                    destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                    do {
+                        changeCount += 1
+                        if isInSameFolder {
+                            currentFolderChangeCount += 1
+                            publicVar.fileChangedCount += 1
+                        }
+                        try FileManager.default.copyItem(at: fileURL, to: destURL)
+                    } catch {
+                        log("粘贴失败 \(fileURL): \(error)")
+                    }
                 } else {
                     let userChoice = showReplaceDialog(for: destURL, isSingle: items.count == 1, isMove: false)
                     switch userChoice {
                     case .replace:
                         do {
-                            publicVar.fileChangedCount += 1
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.removeItem(at: destURL)
                             try FileManager.default.copyItem(at: fileURL, to: destURL)
                         } catch {
@@ -3099,8 +3169,37 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     case .replaceAll:
                         shouldReplaceAll = true
                         do {
-                            publicVar.fileChangedCount += 1
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.removeItem(at: destURL)
+                            try FileManager.default.copyItem(at: fileURL, to: destURL)
+                        } catch {
+                            log("粘贴失败 \(fileURL): \(error)")
+                        }
+                    case .autoRename:
+                        destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                        do {
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
+                            try FileManager.default.copyItem(at: fileURL, to: destURL)
+                        } catch {
+                            log("粘贴失败 \(fileURL): \(error)")
+                        }
+                    case .autoRenameAll:
+                        shouldAutoRenameAll = true
+                        destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                        do {
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.copyItem(at: fileURL, to: destURL)
                         } catch {
                             log("粘贴失败 \(fileURL): \(error)")
@@ -3117,7 +3216,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
             } else {
                 do {
-                    publicVar.fileChangedCount += 1
+                    changeCount += 1
+                    if isInSameFolder {
+                        currentFolderChangeCount += 1
+                        publicVar.fileChangedCount += 1
+                    }
                     try FileManager.default.copyItem(at: fileURL, to: destURL)
                 } catch {
                     log("粘贴失败 \(fileURL): \(error)")
@@ -3128,6 +3231,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     }
     
     func handleMoveToDownload() {
+        if publicVar.selectedUrls().isEmpty {return}
+        
         // 备份剪贴板内容
         let backupItems = backupPasteboard()
         
@@ -3224,19 +3329,31 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         globalVar.operationLogs.append(operationLog)
         
         //播放提示音
-        triggerFinderSound()
+        var changeCount = 0
+        defer {
+            if changeCount > 0 {
+                triggerFinderSound()
+            }
+        }
         
         // 针对递归模式处理
+        var currentFolderChangeCount = 0
         defer {
             if publicVar.isRecursiveMode {
-                if fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
-                    scheduledRefresh()
+                if currentFolderChangeCount > 0 {
+                    fileDB.lock()
+                    let ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    fileDB.unlock()
+                    if ifRefresh {
+                        scheduledRefresh()
+                    }
                 }
             }
         }
         
         var shouldReplaceAll = false
         var shouldSkipAll = false
+        var shouldAutoRenameAll = false
         
         let StoreIsKeyEventEnabled = publicVar.isKeyEventEnabled
         publicVar.isKeyEventEnabled = false
@@ -3245,8 +3362,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             var destURL = destinationURL.appendingPathComponent(fileURL.lastPathComponent)
             
             // 如果是在同一目录移动，则不作动作
-            if fileURL.deletingLastPathComponent() == destinationURL {
-                log("不能将文件/文件夹移动到相同目录中。")
+            var isInSameFolder = fileURL.deletingLastPathComponent() == destinationURL
+            if isInSameFolder {
                 continue
             }
 
@@ -3257,7 +3374,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             if FileManager.default.fileExists(atPath: destURL.path) {
                 if shouldReplaceAll {
                     do {
-                        publicVar.fileChangedCount += 1
+                        changeCount += 1
+                        if isInSameFolder {
+                            currentFolderChangeCount += 1
+                            publicVar.fileChangedCount += 1
+                        }
                         try FileManager.default.removeItem(at: destURL)
                         try FileManager.default.moveItem(at: fileURL, to: destURL)
                     } catch {
@@ -3265,12 +3386,28 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 } else if shouldSkipAll {
                     continue
+                } else if shouldAutoRenameAll {
+                    destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                    do {
+                        changeCount += 1
+                        if isInSameFolder {
+                            currentFolderChangeCount += 1
+                            publicVar.fileChangedCount += 1
+                        }
+                        try FileManager.default.moveItem(at: fileURL, to: destURL)
+                    } catch {
+                        log("移动失败 \(fileURL): \(error)")
+                    }
                 } else {
                     let userChoice = showReplaceDialog(for: destURL, isSingle: items.count == 1, isMove: true)
                     switch userChoice {
                     case .replace:
                         do {
-                            publicVar.fileChangedCount += 1
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.removeItem(at: destURL)
                             try FileManager.default.moveItem(at: fileURL, to: destURL)
                         } catch {
@@ -3279,8 +3416,37 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     case .replaceAll:
                         shouldReplaceAll = true
                         do {
-                            publicVar.fileChangedCount += 1
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.removeItem(at: destURL)
+                            try FileManager.default.moveItem(at: fileURL, to: destURL)
+                        } catch {
+                            log("移动失败 \(fileURL): \(error)")
+                        }
+                    case .autoRename:
+                        destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                        do {
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
+                            try FileManager.default.moveItem(at: fileURL, to: destURL)
+                        } catch {
+                            log("移动失败 \(fileURL): \(error)")
+                        }
+                    case .autoRenameAll:
+                        shouldAutoRenameAll = true
+                        destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
+                        do {
+                            changeCount += 1
+                            if isInSameFolder {
+                                currentFolderChangeCount += 1
+                                publicVar.fileChangedCount += 1
+                            }
                             try FileManager.default.moveItem(at: fileURL, to: destURL)
                         } catch {
                             log("移动失败 \(fileURL): \(error)")
@@ -3297,7 +3463,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
             } else {
                 do {
-                    publicVar.fileChangedCount += 1
+                    changeCount += 1
+                    if isInSameFolder {
+                        currentFolderChangeCount += 1
+                        publicVar.fileChangedCount += 1
+                    }
                     try FileManager.default.moveItem(at: fileURL, to: destURL)
                 } catch {
                     log("移动失败 \(fileURL): \(error)")
@@ -3316,6 +3486,36 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             text = NSLocalizedString("operation-logs-info", comment: "(对操作日志的说明)")
         }
         showInformationLong(title: NSLocalizedString("Operation Logs", comment: "操作日志"), message: text)
+    }
+
+    func handleChangeCurrentTag(tag: String){
+        publicVar.currentTag = tag
+        UserDefaults.standard.setValue(tag, forKey: "currentTag")
+    }
+    
+    func handleTagging(){
+        
+        let urls = publicVar.selectedUrls()
+        guard urls.count != 0 else {return}
+
+        if TaggingSystem.isAllTagged(tag: publicVar.currentTag, urls: urls) {
+            TaggingSystem.remove(tag: publicVar.currentTag, urls: urls)
+        }else{
+            TaggingSystem.add(tag: publicVar.currentTag, urls: urls)
+        }
+        
+        let isInTagView = false
+        if isInTagView{
+            refreshCollectionView(needLoadThumbPriority: true)
+        }else{
+            if let collectionView = collectionView {
+                for item in collectionView.visibleItems() {
+                    if let item = item as? CustomCollectionViewItem {
+                        item.tagChanged()
+                    }
+                }
+            }
+        }
     }
 
     func getUniqueDestinationURL(for url: URL, isInPlace: Bool = false) -> URL {
@@ -3345,6 +3545,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         case replaceAll
         case skip
         case skipAll
+        case autoRename
+        case autoRenameAll
         case cancel
     }
 
@@ -3359,29 +3561,29 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         alert.alertStyle = .warning
         alert.icon = NSImage(named: NSImage.infoName)// 设置系统提示图标
         alert.addButton(withTitle: NSLocalizedString("Replace", comment: "替换"))
+        alert.addButton(withTitle: NSLocalizedString("Auto Rename", comment: "自动重命名"))
         if !isSingle {
-            alert.addButton(withTitle: NSLocalizedString("Replace All", comment: "全部替换"))
             alert.addButton(withTitle: NSLocalizedString("Skip", comment: "跳过"))
-            alert.addButton(withTitle: NSLocalizedString("Skip All", comment: "全部跳过"))
         }
         alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "取消"))
         
+        // 添加复选框
+        let applyToAllCheckbox = NSButton(checkboxWithTitle: NSLocalizedString("Apply to all", comment: "应用到全部"), target: nil, action: nil)
+        if !isSingle {
+            alert.accessoryView = applyToAllCheckbox
+        }
+        
         let response = alert.runModal()
+        let applyToAll = applyToAllCheckbox.state == .on
         
         switch response {
         case .alertFirstButtonReturn:
-            return .replace
+            return applyToAll ? .replaceAll : .replace
         case .alertSecondButtonReturn:
-            if isSingle {
-                return .cancel
-            }else{
-                return .replaceAll
-            }
+            return applyToAll ? .autoRenameAll : .autoRename
         case .alertThirdButtonReturn:
-            return .skip
+            return applyToAll ? .skipAll : .skip
         case NSApplication.ModalResponse(rawValue: 1003):
-            return .skipAll
-        case NSApplication.ModalResponse(rawValue: 1004):
             return .cancel
         default:
             return .cancel
@@ -3976,6 +4178,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             targetPaths.insert(ROOT_NAME, at: 0)
         }
         
+        //标签
+        if path.contains("VirtualTagFolder") {
+            targetPaths = ["Tag " + URL(string: path)!.lastPathComponent]
+        }
+        
         if targetPaths.isEmpty {
             outlineView.deselectAll(nil)
         }else{
@@ -4346,6 +4553,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if VolumeManager.shared.isExternalVolume(folderURL) {
             properties = [.isHiddenKey, .isDirectoryKey, .fileSizeKey, .contentModificationDateKey, .creationDateKey, .addedToDirectoryDateKey]
         }
+        var isInSameDir = !publicVar.isRecursiveMode
         if !skip {
             do {
                 let curDirURLCacheParameters = (folderURL, publicVar.isRecursiveMode, publicVar.isShowHiddenFile, publicVar.isRecursiveContainFolder, properties)
@@ -4357,7 +4565,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 dirURLCacheParameters = curDirURLCacheParameters
                 
                 if dirURLCache.isEmpty {
-                    if publicVar.isRecursiveMode {
+                    if folderURL.path.contains("VirtualTagFolder") {
+                        dirURLCache = TaggingSystem.getList(tag: folderURL.lastPathComponent)
+                        isInSameDir = false
+                    }else if publicVar.isRecursiveMode {
                         scanFiles(at: folderURL, contents: &dirURLCache, properties: properties)
                     }else{
                         dirURLCache = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: properties, options: [])
@@ -4530,10 +4741,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 var fileSortKey:SortKeyFile
                 let isDir:Bool
                 if filePath.hasSuffix("_FolderMark") {
-                    fileSortKey=SortKeyFile(String(filePath.dropLast("_FolderMark".count)), isDir: true, isInSameDir: !publicVar.isRecursiveMode, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)
+                    fileSortKey=SortKeyFile(String(filePath.dropLast("_FolderMark".count)), isDir: true, isInSameDir: isInSameDir, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)
                     isDir=true
                 }else{
-                    fileSortKey=SortKeyFile(filePath, isInSameDir: !publicVar.isRecursiveMode, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)
+                    fileSortKey=SortKeyFile(filePath, isInSameDir: isInSameDir, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)
                     isDir=false
                 }
                 //读取文件大小日期
@@ -4688,8 +4899,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         
         //是捕获界面，还是将从finder打开替换为目录中打开
         if publicVar.openFromFinderPath == "" {
-            if let snapshot = captureSnapshot(of: mainScrollView){
-                mainScrollView.addSubview(snapshot)
+            if let snapshot = captureSnapshot(of: coreAreaView){
+                coreAreaView.addSubview(snapshot)
                 snapshotQueue.append(snapshot)
             }
 //            currLargeImagePos = -1
@@ -4707,9 +4918,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             let filename=publicVar.openFromFinderPath
             //log(filename)
             fileDB.lock()
-            if let index=fileDB.db[SortKeyDir(path)]?.files.index(forKey: SortKeyFile(filename, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)),
+            if let index=fileDB.db[SortKeyDir(path)]?.files.index(forKey: SortKeyFile(filename, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)),
                let offset=fileDB.db[SortKeyDir(path)]?.files.offset(of: index),
-               let file=fileDB.db[SortKeyDir(path)]?.files[SortKeyFile(filename, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)],
+               let file=fileDB.db[SortKeyDir(path)]?.files[SortKeyFile(filename, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)],
                let url=URL(string: file.path),
                let totalCount=fileDB.db[SortKeyDir(path)]?.files.count,
                let fileCount=fileDB.db[SortKeyDir(path)]?.fileCount
@@ -4759,7 +4970,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         fileDB.unlock()
         
         //如果是切换目录或者文件数量过多，则清空后再insertItems，否则仅reloadData(保持位置)
-        if lastCurFolder != path || fileNum > RESET_VIEW_FILE_NUM_THRESHOLD || fileDB.db[SortKeyDir(path)]?.keepScrollPos == false {
+        fileDB.lock()
+        let needClearThenInsert = lastCurFolder != path || fileNum > RESET_VIEW_FILE_NUM_THRESHOLD || fileDB.db[SortKeyDir(path)]?.keepScrollPos == false
+        fileDB.unlock()
+        if needClearThenInsert {
             //必须按顺序执行以下两句，否则频繁切换目录时会出现异常
             collectionView.reloadData() //重载清空
             collectionView.numberOfItems(inSection:0)
@@ -4832,7 +5046,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     fileDB.lock()
                     let curFolder=fileDB.curFolder
                     let layoutCalcPos=fileDB.db[SortKeyDir(curFolder)]?.layoutCalcPos ?? -1
-                    fileDB.unlock() //内存屏障
+                    fileDB.unlock() 
                     
                     if ver != dirModel.ver {return}
                     
@@ -4907,7 +5121,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     let doNotActualRead=file.doNotActualRead
                     let ver=firstTask.4
                     let count=dirModel.files.count
-                    fileDB.unlock() //内存屏障
+                    fileDB.unlock() 
                     
                     if i == -1 {continue}
                     if ver != dirModel.ver {continue}
@@ -4935,7 +5149,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         var imageInfo = file.imageInfo
                         var originalSize = file.originalSize
                         let curFolder=fileDB.curFolder
-                        fileDB.unlock() //内存屏障
+                        fileDB.unlock() 
                         
                         if ver != dirModel.ver {return}
                         if dir != curFolder {return} // 需要跳过，否则会等上一个目录完全执行完毕后才开始；不过这样就没法预载入其它目录了，待重构任务队列实现
@@ -5096,7 +5310,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         let ver=firstTask.4
                         let otherTaskInfo=firstTask.5
                         let curFolder=fileDB.curFolder
-                        fileDB.unlock() //内存屏障
+                        fileDB.unlock() 
                         
                         if i == -1 {return}
                         if ver != dirModel.ver {return}
@@ -5163,7 +5377,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                 
                                 fileDB.lock()
                                 let curFolder=fileDB.curFolder
-                                fileDB.unlock() //内存屏障
+                                fileDB.unlock() 
                                 
                                 if ver != dirModel.ver {return}
                                 if dir != curFolder {return}
@@ -5192,11 +5406,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                                 publicVar.folderStepForLocate.removeAll()
                                                 
                                                 let targetFolderPath = lastURL.absoluteString
-                                                let targetKey = SortKeyFile(targetFolderPath, isDir: true, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)
+                                                let targetKey = SortKeyFile(targetFolderPath, isDir: true, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)
                                                 
+                                                fileDB.lock()
                                                 if let index=fileDB.db[SortKeyDir(curFolder)]?.files.index(forKey: targetKey),
                                                    let offset=fileDB.db[SortKeyDir(curFolder)]?.files.offset(of: index) {
-                                                    
+                                                    fileDB.unlock()
                                                     let indexPath=IndexPath(item: offset, section: 0)
                                                     collectionView.scrollToItems(at: [indexPath], scrollPosition: .nearestHorizontalEdge)
                                                     collectionView.reloadData()
@@ -5204,7 +5419,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                                     collectionView.selectItems(at: [indexPath], scrollPosition: [])
                                                     collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
                                                     setLoadThumbPriority(ifNeedVisable: true)
-                                                    
+                                                }else{
+                                                    fileDB.unlock()
                                                 }
                                             }
                                         }
@@ -5277,7 +5493,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                     imageExist=true //由于无法正常生成指定大小的缩略图
                                 }
                                 if globalVar.HandledRawExtensions.contains(file.ext.lowercased()){
-                                    imageExist=true //RAW优先使用内嵌缩略图
+                                    //imageExist=true //RAW优先使用内嵌缩略图
+                                    //由于现在实现了缩放内嵌缩略图，因此不再使用此逻辑
                                 }
                             }
                             fileDB.unlock()
@@ -5325,7 +5542,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                         
                                         fileDB.lock()
                                         let curFolder=fileDB.curFolder
-                                        fileDB.unlock() //内存屏障
+                                        fileDB.unlock() 
                                         
                                         if ver != dirModel.ver {return}
                                         
@@ -5939,8 +6156,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         //log("触控板:",event.scrollingDeltaY,event.scrollingDeltaX)
         //log("滚轮的:",event.deltaY)
         
-        // 滚动缩放在
+        // 仅在大图模式下响应
         if largeImageView.isHidden {return}
+        
+        // 滚轮用作缩放时
+        if globalVar.scrollMouseWheelToZoom || isCommandKeyPressed() {return}
         
         // 滚动滚轮或者双指操作触控板来移动图像
         if publicVar.isPanWhenZoomed && !publicVar.isLeftMouseDown && !publicVar.isRightMouseDown {
@@ -6164,7 +6384,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         let videoCount = fileDB.db[SortKeyDir(folderPath)]?.videoCount ?? 0
         let rangeCount = globalVar.useInternalPlayer ? imageCount+videoCount : imageCount
         if rangeCount != 0 {
-            if let file = fileDB.db[SortKeyDir(folderPath)]?.files[SortKeyFile(file.path, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath)] {
+            if let file = fileDB.db[SortKeyDir(folderPath)]?.files[SortKeyFile(file.path, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)] {
                 //fullTitle += " | " + String(format: "(%d/%d)",idInImage+1,imageCount)
                 let idInRange = globalVar.useInternalPlayer ? file.idInImageAndVideo : file.idInImage
                 fullTitle += " " + String(format: "(%d/%d)",idInRange+1,rangeCount)
@@ -6284,15 +6504,17 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         }
         
         do{ // 当前图像
+            fileDB.lock()
             if let file=fileDB.db[SortKeyDir(curFolder)]!.files.elementSafe(atOffset: currLargeImagePos)?.1,
                file.type == .image{
                 fileQueue.append((file, 0))
             }
+            fileDB.unlock()
         }
         
-        fileQueue.sort { $0.1 > $1.1 }
-        
+        // 排序后预载入
         fileDB.lock()
+        fileQueue.sort { $0.1 > $1.1 }
         for (file,priority) in fileQueue {
             preloadLargeImageForFile(file: file, priority: priority)
         }
@@ -6331,6 +6553,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             
             //判断HDR
             var isHDR = (file.imageInfo?.isHDR ?? false) && publicVar.isEnableHDR
+            if globalVar.HandledRawExtensions.contains(url.pathExtension.lowercased()) && publicVar.isRawUseEmbeddedThumb {
+                isHDR = false
+            }
             
             //计算宽高
             if originalSize.height/originalSize.width*maxBounds.width > maxBounds.height {
@@ -6353,6 +6578,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 doNotGenResized=true
             }
             
+            //如果RAW使用Exif内嵌缩略图，则不使用原图（进行缩放）
+            if globalVar.HandledRawExtensions.contains(url.pathExtension.lowercased()) && publicVar.isRawUseEmbeddedThumb {
+                doNotGenResized=false
+            }
+            
             //使用原图的格式
             if ["gif", "svg", "ai"].contains(url.pathExtension.lowercased()){
                 doNotGenResized=true
@@ -6362,8 +6592,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
             
 
-            DispatchQueue.global(qos: .userInitiated).async {
-                _ = LargeImageProcessor.getImageCache(url: url, size: largeSize, rotate: 0, ver: file.ver, useOriginalImage: doNotGenResized, isHDR: isHDR, needWaitWhenSame: false)
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self = self else { return }
+                _ = LargeImageProcessor.getImageCache(url: url, size: largeSize, rotate: 0, ver: file.ver, useOriginalImage: doNotGenResized, isHDR: isHDR, isRawUseEmbeddedThumb: publicVar.isRawUseEmbeddedThumb, needWaitWhenSame: false)
             }
             
         }
@@ -6467,6 +6698,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             
             //判断HDR
             var isHDR = (file.imageInfo?.isHDR ?? false) && publicVar.isEnableHDR
+            if globalVar.HandledRawExtensions.contains(url.pathExtension.lowercased()) && publicVar.isRawUseEmbeddedThumb {
+                isHDR = false
+            }
             
             //判断旋转
             if rotate%2 == 1 {
@@ -6510,6 +6744,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             if rotate != 0 {
                 doNotGenResized=false
             }
+
+            //如果RAW使用Exif内嵌缩略图，则不使用原图（进行缩放）
+            if globalVar.HandledRawExtensions.contains(url.pathExtension.lowercased()) && publicVar.isRawUseEmbeddedThumb {
+                doNotGenResized=false
+            }
             
             //使用原图的格式
             if ["gif", "svg", "ai"].contains(url.pathExtension.lowercased()){
@@ -6545,7 +6784,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             lastLargeImageRotate=rotate
             
             //检查是否有大图缓存
-            var preGetImageCache = file.type == .image ? LargeImageProcessor.isImageCachedAndGet(url: url, size: largeSize, rotate: rotate, ver: file.ver, isHDR: isHDR) : nil
+            var preGetImageCache = file.type == .image ? LargeImageProcessor.isImageCachedAndGet(url: url, size: largeSize, rotate: rotate, ver: file.ver, isHDR: isHDR, isRawUseEmbeddedThumb: publicVar.isRawUseEmbeddedThumb) : nil
             if forceRefresh {preGetImageCache = nil}
             let isImageCached = preGetImageCache != nil
             
@@ -6608,7 +6847,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     //按实际目标分辨率绘制效果较差，观察到1080P屏幕双倍插值后绘制与直接使用原图效果才类似，因此即使scale==1，此处size也不除以2
                     var largeImage: NSImage?
                     if resetSize && !forceRefresh {
-                        largeImage=LargeImageProcessor.getImageCache(url: url, size: largeSize, rotate: rotate, ver: file.ver, useOriginalImage: doNotGenResized, isHDR: isHDR)
+                        largeImage=LargeImageProcessor.getImageCache(url: url, size: largeSize, rotate: rotate, ver: file.ver, useOriginalImage: doNotGenResized, isHDR: isHDR, isRawUseEmbeddedThumb: publicVar.isRawUseEmbeddedThumb)
                     }else{
                         if isHDR {
                             largeImage = getHDRImage(url: url, size: doNotGenResized ? nil : largeSize, rotate: rotate)
@@ -6620,7 +6859,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                 largeImage = NSImage(contentsOf: url)?.rotated(by: CGFloat(-90*rotate))
                             }
                         }else{
-                            largeImage = getResizedImage(url: url, size: largeSize, rotate: rotate)
+                            largeImage = getResizedImage(url: url, size: largeSize, rotate: rotate, isRawUseEmbeddedThumb: publicVar.isRawUseEmbeddedThumb)
                             if largeImage == nil {
                                 lastResizeFailed = true
                                 largeImage = NSImage(contentsOf: url)?.rotated(by: CGFloat(-90*rotate))
@@ -7224,6 +7463,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         
         // 通用布局
         publicVar.profile.setValue(forKey: "isShowThumbnailBadge", value: newStyle.getValue(forKey: "isShowThumbnailBadge"))
+        publicVar.profile.setValue(forKey: "isShowThumbnailTag", value: newStyle.getValue(forKey: "isShowThumbnailTag"))
         publicVar.profile.isShowThumbnailFilename = newStyle.isShowThumbnailFilename
         publicVar.profile.ThumbnailFilenameSize = newStyle.ThumbnailFilenameSize
         publicVar.profile._thumbnailCellPadding = newStyle._thumbnailCellPadding
@@ -7247,7 +7487,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     
     func customLayoutStylePrompt (){
         if let mainWindow = NSApplication.shared.mainWindow {
-            showThumbnailOptionsPanel(on: mainWindow) { [weak self] isUseFullPath, isShowStatistics, isShowBadge, isShowFilename, filenameSize, cellPadding, borderRadiusInGrid, borderRadius, borderThickness, lineSpaceAdjust, showShadow in
+            showThumbnailOptionsPanel(on: mainWindow) { [weak self] isUseFullPath, isShowStatistics, isShowBadge, isShowTag, isShowFilename, filenameSize, cellPadding, borderRadiusInGrid, borderRadius, borderThickness, lineSpaceAdjust, showShadow in
                 guard let self = self else { return }
                 
                 let newStyle = CustomProfile()
@@ -7257,6 +7497,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 
                 // 通用布局
                 newStyle.setValue(forKey: "isShowThumbnailBadge", value: String(isShowBadge))
+                newStyle.setValue(forKey: "isShowThumbnailTag", value: String(isShowTag))
                 newStyle.isShowThumbnailFilename = isShowFilename
                 newStyle.ThumbnailFilenameSize = filenameSize
                 newStyle._thumbnailCellPadding = cellPadding

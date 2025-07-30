@@ -416,38 +416,94 @@ func renameAlert(urls: [URL]) -> Bool {
 
             var allSuccess = true
             
-            for (index, originalUrl) in urls.enumerated() {
-                // 构建新文件名
+            // 第一步：生成最终目标名字列表
+            var finalNames: [(originalUrl: URL, finalUrl: URL)] = []
+            var nameIndex = 1
+            
+            for originalUrl in urls {
                 var newName = newBaseName
-                if index >= 0 && urls.count > 1 {
-                    // 如果有扩展名，在扩展名前添加序号
-                    if let ext = originalUrl.pathExtension.isEmpty ? nil : originalUrl.pathExtension {
-                        let nameWithoutExt = (newBaseName as NSString).deletingPathExtension
-                        newName = "\(nameWithoutExt)_\(index + 1).\(ext)"
-                    } else {
-                        newName = "\(newBaseName)_\(index + 1)"
+                // 批量重命名
+                if urls.count > 1 {
+                    var newUrl: URL
+                    var collision = false
+                    repeat {
+                        // 如果有扩展名，在扩展名前添加序号
+                        if let ext = originalUrl.pathExtension.isEmpty ? nil : originalUrl.pathExtension {
+                            let nameWithoutExt = (newBaseName as NSString).deletingPathExtension
+                            newName = "\(nameWithoutExt)_\(nameIndex).\(ext)"
+                        } else {
+                            newName = "\(newBaseName)_\(nameIndex)"
+                        }
+                        newUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                        nameIndex += 1
+                        
+                        // 检查是否存在同名文件，但排除当前待重命名列表中的文件
+                        if FileManager.default.fileExists(atPath: newUrl.path) &&
+                             !urls.contains(where: { $0.path.lowercased() == newUrl.path.lowercased() })
+                        {
+                            collision = true
+                            
+                            let alert = NSAlert()
+                            alert.messageText = NSLocalizedString("File Already Exists", comment: "文件已存在")
+                            alert.informativeText = NSLocalizedString("file-exists-continue-batch-rename", comment: "批量重命名的序号与已有文件重名，是否继续?")
+                            alert.alertStyle = .warning
+                            alert.addButton(withTitle: NSLocalizedString("Continue", comment: "继续"))
+                            alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "取消"))
+                            
+                            if alert.runModal() == .alertSecondButtonReturn {
+                                return false
+                            }
+                        }else{
+                            collision = false
+                        }
+                    } while collision
+                }else{
+                    // 单个重命名
+                    let newUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                    if FileManager.default.fileExists(atPath: newUrl.path) {
+                        showAlert(message: NSLocalizedString("renaming-conflict", comment: "该名称的文件已存在，请选择其他名称。"))
+                        allSuccess = false
+                        return false
                     }
                 }
                 
-                let newUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                let finalUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                finalNames.append((originalUrl: originalUrl, finalUrl: finalUrl))
+            }
+            
+            // 第二步：将所有文件改成临时文件名
+            var tempNames: [(tempUrl: URL, finalUrl: URL)] = []
+            for (index, item) in finalNames.enumerated() {
+                let tempName = "temp_rename_\(UUID().uuidString)"
+                let tempUrl = item.originalUrl.deletingLastPathComponent().appendingPathComponent(tempName)
                 
-                // 检查是否存在同名文件
-                if FileManager.default.fileExists(atPath: newUrl.path) &&
-                    originalUrl.path.lowercased() != newUrl.path.lowercased() {
-                    showAlert(message: NSLocalizedString("renaming-conflict", comment: "该名称的文件已存在，请选择其他名称。"))
+                do {
+                    try FileManager.default.moveItem(at: item.originalUrl, to: tempUrl)
+                    tempNames.append((tempUrl: tempUrl, finalUrl: item.finalUrl))
+                } catch {
+                    // 如果临时重命名失败，回滚之前的临时重命名
+                    for prevTemp in tempNames {
+                        try? FileManager.default.moveItem(at: prevTemp.tempUrl, to: finalNames[tempNames.count].originalUrl)
+                    }
+                    log("Failed to create temp name: \(error)")
                     allSuccess = false
                     break
-                } else if originalUrl.path != newUrl.path {
-                    // 执行重命名操作
+                }
+            }
+            
+            // 第三步：将临时文件名改成最终文件名
+            if allSuccess {
+                for item in tempNames {
                     do {
                         // 文件更改计数
                         getMainViewController()?.publicVar.fileChangedCount += 1
                         
-                        try FileManager.default.moveItem(at: originalUrl, to: newUrl)
-                        log("File renamed to \(newName)")
+                        try FileManager.default.moveItem(at: item.tempUrl, to: item.finalUrl)
+                        log("File renamed to \(item.finalUrl.lastPathComponent)")
                     } catch {
                         log("Failed to rename file: \(error)")
                         allSuccess = false
+                        // 这里不需要回滚，因为用户可以通过临时文件找回
                         break
                     }
                 }
@@ -456,7 +512,10 @@ func renameAlert(urls: [URL]) -> Bool {
             // 针对递归模式处理
             if let viewController = getMainViewController() {
                 if viewController.publicVar.isRecursiveMode {
-                    if viewController.fileDB.db[SortKeyDir(viewController.fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD {
+                    viewController.fileDB.lock()
+                    let ifRefresh = viewController.fileDB.db[SortKeyDir(viewController.fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    viewController.fileDB.unlock()
+                    if ifRefresh {
                         viewController.scheduledRefresh()
                     }
                 }
@@ -668,6 +727,9 @@ func printContent(_ content: NSView) {
     printInfo.verticalPagination = .fit
 
     let printOperation = NSPrintOperation(view: printView, printInfo: printInfo)
+    printOperation.printPanel.options.insert(.showsPaperSize)
+    printOperation.printPanel.options.insert(.showsOrientation)
+    printOperation.printPanel.options.insert(.showsScaling)
     printOperation.run()
 }
 
@@ -767,6 +829,9 @@ class ThumbnailOptionsWindow: NSWindow {
     private var initialShowThumbnailBadge: Bool {
         return initialProfile.getValue(forKey: "isShowThumbnailBadge") == "true"
     }
+    private var initialShowThumbnailTag: Bool {
+        return initialProfile.getValue(forKey: "isShowThumbnailTag") == "true"
+    }
     private var initialShowThumbnailFilename: Bool {
         return initialProfile.isShowThumbnailFilename
     }
@@ -796,6 +861,7 @@ class ThumbnailOptionsWindow: NSWindow {
     var isWindowTitleUseFullPath: Bool
     var isWindowTitleShowStatistics: Bool
     var isShowThumbnailBadge: Bool
+    var isShowThumbnailTag: Bool
     var isShowThumbnailFilename: Bool
     var thumbnailFilenameSize: Double
     var thumbnailCellPadding: Double
@@ -814,6 +880,7 @@ class ThumbnailOptionsWindow: NSWindow {
         isWindowTitleUseFullPath = profile.getValue(forKey: "isWindowTitleUseFullPath") == "true"
         isWindowTitleShowStatistics = profile.getValue(forKey: "isWindowTitleShowStatistics") == "true"
         isShowThumbnailBadge = profile.getValue(forKey: "isShowThumbnailBadge") == "true"
+        isShowThumbnailTag = profile.getValue(forKey: "isShowThumbnailTag") == "true"
         isShowThumbnailFilename = profile.isShowThumbnailFilename
         thumbnailFilenameSize = profile.ThumbnailFilenameSize
         thumbnailCellPadding = profile._thumbnailCellPadding
@@ -867,7 +934,8 @@ class ThumbnailOptionsWindow: NSWindow {
         // Create labeled controls
         let windowTitleFullPathCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Use Full Path in Window Title", comment: "在窗口标题中使用完整路径"), isChecked: isWindowTitleUseFullPath)
         let windowTitleStatsCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Show Statistics in Window Title", comment: "在窗口标题中显示统计信息"), isChecked: isWindowTitleShowStatistics)
-        let showBadgeCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Show RAW/HDR Badge in Thumbnail(if exist)", comment: "缩略图显示RAW/HDR标记(如果存在)"), isChecked: isShowThumbnailBadge)
+        let showBadgeCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Show RAW/HDR Badge on Thumbnail(if exist)", comment: "缩略图显示RAW/HDR标记(如果存在)"), isChecked: isShowThumbnailBadge)
+        let showTagCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Show Tag on Thumbnail(if exist)", comment: "缩略图显示标签(如果存在)"), isChecked: isShowThumbnailTag)
         let showFilenameCheckboxView = createLabeledCheckbox(label: NSLocalizedString("Show Thumbnail Filename", comment: "缩略图显示文件名"), isChecked: isShowThumbnailFilename)
         let filenameSizeTextField = createLabeledTextField(label: NSLocalizedString("Thumbnail Filename Font Size", comment: "缩略图文件名字体大小"), defaultValue: String(thumbnailFilenameSize))
         let cellPaddingTextField = createLabeledTextField(label: NSLocalizedString("Thumbnail Cell Padding", comment: "缩略图单元格外边距"), defaultValue: String(thumbnailCellPadding))
@@ -881,6 +949,7 @@ class ThumbnailOptionsWindow: NSWindow {
         stackView.addArrangedSubview(windowTitleFullPathCheckboxView)
         stackView.addArrangedSubview(windowTitleStatsCheckboxView)
         stackView.addArrangedSubview(showBadgeCheckboxView)
+        stackView.addArrangedSubview(showTagCheckboxView)
         stackView.addArrangedSubview(showFilenameCheckboxView)
         stackView.addArrangedSubview(filenameSizeTextField)
         stackView.addArrangedSubview(cellPaddingTextField)
@@ -970,18 +1039,20 @@ class ThumbnailOptionsWindow: NSWindow {
         let windowTitleFullPathCheckbox = (stackView.arrangedSubviews[2] as! NSStackView).views[1] as! NSButton
         let windowTitleStatsCheckbox = (stackView.arrangedSubviews[3] as! NSStackView).views[1] as! NSButton
         let showBadgeCheckbox = (stackView.arrangedSubviews[4] as! NSStackView).views[1] as! NSButton
-        let showFilenameCheckbox = (stackView.arrangedSubviews[5] as! NSStackView).views[1] as! NSButton
-        let filenameSizeTextField = (stackView.arrangedSubviews[6] as! NSStackView).views[1] as! NSTextField
-        let cellPaddingTextField = (stackView.arrangedSubviews[7] as! NSStackView).views[1] as! NSTextField
-        let borderRadiusInGridTextField = (stackView.arrangedSubviews[8] as! NSStackView).views[1] as! NSTextField
-        let borderRadiusTextField = (stackView.arrangedSubviews[9] as! NSStackView).views[1] as! NSTextField
-        let borderThicknessTextField = (stackView.arrangedSubviews[10] as! NSStackView).views[1] as! NSTextField
-        let lineSpaceAdjustTextField = (stackView.arrangedSubviews[11] as! NSStackView).views[1] as! NSTextField
-        let showShadowCheckbox = (stackView.arrangedSubviews[12] as! NSStackView).views[1] as! NSButton
+        let showTagCheckbox = (stackView.arrangedSubviews[5] as! NSStackView).views[1] as! NSButton
+        let showFilenameCheckbox = (stackView.arrangedSubviews[6] as! NSStackView).views[1] as! NSButton
+        let filenameSizeTextField = (stackView.arrangedSubviews[7] as! NSStackView).views[1] as! NSTextField
+        let cellPaddingTextField = (stackView.arrangedSubviews[8] as! NSStackView).views[1] as! NSTextField
+        let borderRadiusInGridTextField = (stackView.arrangedSubviews[9] as! NSStackView).views[1] as! NSTextField
+        let borderRadiusTextField = (stackView.arrangedSubviews[10] as! NSStackView).views[1] as! NSTextField
+        let borderThicknessTextField = (stackView.arrangedSubviews[11] as! NSStackView).views[1] as! NSTextField
+        let lineSpaceAdjustTextField = (stackView.arrangedSubviews[12] as! NSStackView).views[1] as! NSTextField
+        let showShadowCheckbox = (stackView.arrangedSubviews[13] as! NSStackView).views[1] as! NSButton
         
         self.isWindowTitleUseFullPath = windowTitleFullPathCheckbox.state == .on
         self.isWindowTitleShowStatistics = windowTitleStatsCheckbox.state == .on
         self.isShowThumbnailBadge = showBadgeCheckbox.state == .on
+        self.isShowThumbnailTag = showTagCheckbox.state == .on
         self.isShowThumbnailFilename = showFilenameCheckbox.state == .on
         self.thumbnailFilenameSize = Double(filenameSizeTextField.stringValue) ?? initialThumbnailFilenameSize
         self.thumbnailCellPadding = Double(cellPaddingTextField.stringValue) ?? initialThumbnailCellPadding
@@ -1005,19 +1076,21 @@ class ThumbnailOptionsWindow: NSWindow {
         let windowTitleFullPathCheckbox = (stackView.arrangedSubviews[2] as! NSStackView).views[1] as! NSButton
         let windowTitleStatsCheckbox = (stackView.arrangedSubviews[3] as! NSStackView).views[1] as! NSButton
         let showBadgeCheckbox = (stackView.arrangedSubviews[4] as! NSStackView).views[1] as! NSButton
-        let showFilenameCheckbox = (stackView.arrangedSubviews[5] as! NSStackView).views[1] as! NSButton
-        let filenameSizeTextField = (stackView.arrangedSubviews[6] as! NSStackView).views[1] as! NSTextField
-        let cellPaddingTextField = (stackView.arrangedSubviews[7] as! NSStackView).views[1] as! NSTextField
-        let borderRadiusInGridTextField = (stackView.arrangedSubviews[8] as! NSStackView).views[1] as! NSTextField
-        let borderRadiusTextField = (stackView.arrangedSubviews[9] as! NSStackView).views[1] as! NSTextField
-        let borderThicknessTextField = (stackView.arrangedSubviews[10] as! NSStackView).views[1] as! NSTextField
-        let lineSpaceAdjustTextField = (stackView.arrangedSubviews[11] as! NSStackView).views[1] as! NSTextField
-        let showShadowCheckbox = (stackView.arrangedSubviews[12] as! NSStackView).views[1] as! NSButton
+        let showTagCheckbox = (stackView.arrangedSubviews[5] as! NSStackView).views[1] as! NSButton
+        let showFilenameCheckbox = (stackView.arrangedSubviews[6] as! NSStackView).views[1] as! NSButton
+        let filenameSizeTextField = (stackView.arrangedSubviews[7] as! NSStackView).views[1] as! NSTextField
+        let cellPaddingTextField = (stackView.arrangedSubviews[8] as! NSStackView).views[1] as! NSTextField
+        let borderRadiusInGridTextField = (stackView.arrangedSubviews[9] as! NSStackView).views[1] as! NSTextField
+        let borderRadiusTextField = (stackView.arrangedSubviews[10] as! NSStackView).views[1] as! NSTextField
+        let borderThicknessTextField = (stackView.arrangedSubviews[11] as! NSStackView).views[1] as! NSTextField
+        let lineSpaceAdjustTextField = (stackView.arrangedSubviews[12] as! NSStackView).views[1] as! NSTextField
+        let showShadowCheckbox = (stackView.arrangedSubviews[13] as! NSStackView).views[1] as! NSButton
         
         // Reset values to initial values
         windowTitleFullPathCheckbox.state = initialWindowTitleUseFullPath ? .on : .off
         windowTitleStatsCheckbox.state = initialWindowTitleShowStatistics ? .on : .off
         showBadgeCheckbox.state = initialShowThumbnailBadge ? .on : .off
+        showTagCheckbox.state = initialShowThumbnailTag ? .on : .off
         showFilenameCheckbox.state = initialShowThumbnailFilename ? .on : .off
         filenameSizeTextField.stringValue = String(initialThumbnailFilenameSize)
         cellPaddingTextField.stringValue = String(initialThumbnailCellPadding)
@@ -1031,7 +1104,7 @@ class ThumbnailOptionsWindow: NSWindow {
 
 
 // Function to display the panel as a sheet
-func showThumbnailOptionsPanel(on parentWindow: NSWindow, completion: @escaping (Bool, Bool, Bool, Bool, Double, Double, Double, Double, Double, Double, Bool) -> Void) {
+func showThumbnailOptionsPanel(on parentWindow: NSWindow, completion: @escaping (Bool, Bool, Bool, Bool, Bool, Double, Double, Double, Double, Double, Double, Bool) -> Void) {
     let thumbnailOptionsWindow = ThumbnailOptionsWindow()
     let StoreIsKeyEventEnabled = getMainViewController()!.publicVar.isKeyEventEnabled
     getMainViewController()!.publicVar.isKeyEventEnabled=false
@@ -1041,6 +1114,7 @@ func showThumbnailOptionsPanel(on parentWindow: NSWindow, completion: @escaping 
             completion(thumbnailOptionsWindow.isWindowTitleUseFullPath,
                       thumbnailOptionsWindow.isWindowTitleShowStatistics,
                       thumbnailOptionsWindow.isShowThumbnailBadge,
+                      thumbnailOptionsWindow.isShowThumbnailTag,
                       thumbnailOptionsWindow.isShowThumbnailFilename,
                       thumbnailOptionsWindow.thumbnailFilenameSize,
                       thumbnailOptionsWindow.thumbnailCellPadding,

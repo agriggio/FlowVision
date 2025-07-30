@@ -12097,6 +12097,102 @@
         }
       }
     },
+    "gd3-kJ-Wxy.title" : {
+      "comment" : "Class = \"NSMenuItem\"; title = \"RAW Uses Exif Embedded Thumbnail\"; ObjectID = \"gd3-kJ-Wxy\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يستخدم RAW الصورة المصغرة المضمنة في Exif"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW verwendet EXIF eingebettetes Thumbnail"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "RAW Uses Exif Embedded Thumbnail"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW utiliza la miniatura incrustada de Exif"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW utilise la miniature intégrée Exif"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW usa miniatura incorporata Exif"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAWはExif埋め込みサムネイルを使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW는 Exif 내장 섬네일을 사용합니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW gebruikt Exif-ingesloten miniatuurafbeelding"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW Usa Miniatura Incorporada no Exif"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O RAW Usa Miniatura Incorporada Exif"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW использует встроенный миниатюрный Exif"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW använder Exif-inbäddad miniatyrbild"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW使用Exif内嵌缩略图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RAW 使用 Exif 嵌入的縮圖"
+          }
+        }
+      }
+    },
     "geW-lc-Njk.title" : {
       "comment" : "Class = \"NSMenuItem\"; title = \"Show Camera RAW Files\"; ObjectID = \"geW-lc-Njk\";",
       "extractionState" : "extracted_with_value",
@@ -14307,7 +14403,7 @@
     },
     "qIS-W8-SiK.title" : {
       "comment" : "Class = \"NSMenuItem\"; title = \"Page Setup…\"; ObjectID = \"qIS-W8-SiK\";",
-      "extractionState" : "extracted_with_value",
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -16797,6 +16893,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "顯示替代字"
+          }
+        }
+      }
+    },
+    "z7K-bZ-CoE.title" : {
+      "comment" : "Class = \"NSMenuItem\"; title = \"Readme...\"; ObjectID = \"z7K-bZ-CoE\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اقرأني..."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liesmich..."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Readme..."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Léame..."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lisez-moi..."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leggimi..."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リードミー..."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Readme..."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lees mij..."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leia-me..."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Leia-me..."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Читать..."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Läs mig..."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "说明..."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自述檔..."
           }
         }
       }

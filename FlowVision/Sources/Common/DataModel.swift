@@ -20,14 +20,15 @@ extension Map {
 
 class SortKeyFile: SortKey, NSCopying {
     func copy(with zone: NSZone? = nil) -> Any {
-        let copy = SortKeyFile(path, createDate: createDate, modDate: modDate, addDate: addDate, size: size, isDir: isDir, isInSameDir: isInSameDir, sortType: sortType, isSortFolderFirst: isSortFolderFirst, isSortUseFullPath: isSortUseFullPath)
+        let copy = SortKeyFile(path, createDate: createDate, modDate: modDate, addDate: addDate, size: size, isDir: isDir, isInSameDir: isInSameDir, sortType: sortType, isSortFolderFirst: isSortFolderFirst, isSortUseFullPath: isSortUseFullPath, randomSeed: seed)
         return copy
     }
 }
 
 class SortKeyDir: SortKey {
-    override init(_ path: String, createDate: Date = Date(), modDate: Date = Date(), addDate: Date = Date() , size: Int = 0, isDir: Bool = false, isInSameDir: Bool = false, needGetProperties: Bool = false, sortType: SortType = .pathA, isSortFolderFirst: Bool = true, isSortUseFullPath: Bool = true) {
-        super.init(path, createDate: createDate, modDate: modDate, addDate: addDate, size: size, isDir: isDir, isInSameDir: isInSameDir, needGetProperties: needGetProperties, sortType: sortType, isSortFolderFirst: isSortFolderFirst, isSortUseFullPath: isSortUseFullPath)
+    override init(_ path: String, createDate: Date = Date(), modDate: Date = Date(), addDate: Date = Date() , size: Int = 0, isDir: Bool = false, isInSameDir: Bool = false, needGetProperties: Bool = false, sortType: SortType = .pathA, isSortFolderFirst: Bool = true, isSortUseFullPath: Bool = true, randomSeed: Int = 0) {
+        // 使用SortKeyDir\([^()]*?,[^()]*?\)来匹配多于一个参数的调用，不应该出现此情况，因为需要使用统一的排序参数
+        super.init(path, createDate: createDate, modDate: modDate, addDate: addDate, size: size, isDir: isDir, isInSameDir: isInSameDir, needGetProperties: needGetProperties, sortType: sortType, isSortFolderFirst: isSortFolderFirst, isSortUseFullPath: isSortUseFullPath, randomSeed: randomSeed)
     }
 }
 
@@ -48,8 +49,9 @@ class SortKey: Comparable {
     var exifPixel: Int = 0
     
     static var keyTransformedDict = Dictionary<String,[String]>()
+    static let keyTransformedDictLock = NSLock()
     
-    init(_ path: String, createDate: Date = Date(), modDate: Date = Date(), addDate: Date = Date() , size: Int = 0, isDir: Bool = false, isInSameDir: Bool = false, needGetProperties: Bool = false, sortType: SortType, isSortFolderFirst: Bool, isSortUseFullPath: Bool) {
+    init(_ path: String, createDate: Date = Date(), modDate: Date = Date(), addDate: Date = Date() , size: Int = 0, isDir: Bool = false, isInSameDir: Bool = false, needGetProperties: Bool = false, sortType: SortType, isSortFolderFirst: Bool, isSortUseFullPath: Bool, randomSeed: Int) {
         self.path = path
         self.pathCmp = path.lowercased()
         self.createDate = createDate
@@ -61,7 +63,7 @@ class SortKey: Comparable {
         self.sortType = sortType
         self.isSortFolderFirst = isSortFolderFirst
         self.isSortUseFullPath = isSortUseFullPath
-        self.seed = globalVar.randomSeed
+        self.seed = randomSeed
         
         if needGetProperties,
            let url = URL(string: path) {
@@ -122,9 +124,11 @@ class SortKey: Comparable {
         a.localizedStandardCompare(b) == .orderedAscending
     }
     
-    static func hashFunction(fileName: String, seed: Int) -> Int {
+    static func hashFunction(sortKey: SortKey, seed: Int) -> Int {
         var hasher = Hasher()
-        hasher.combine(fileName)
+        hasher.combine(sortKey.path)
+        hasher.combine(sortKey.addDate)
+        hasher.combine(sortKey.createDate)
         hasher.combine(seed)
         return hasher.finalize()
     }
@@ -230,8 +234,8 @@ class SortKey: Comparable {
         
         //随机排序
         if lhs.sortType == .random {
-            let lhs_hash=hashFunction(fileName: lhs.pathCmp, seed: lhs.seed)
-            let rhs_hash=hashFunction(fileName: rhs.pathCmp, seed: rhs.seed)
+            let lhs_hash=hashFunction(sortKey: lhs, seed: lhs.seed)
+            let rhs_hash=hashFunction(sortKey: rhs, seed: rhs.seed)
             return lhs_hash<rhs_hash
         }
         
@@ -300,6 +304,7 @@ class SortKey: Comparable {
         
         var lhs_paths: [String]
         var rhs_paths: [String]
+        keyTransformedDictLock.lock() // 加锁，防止多线程访问异常
         if keyTransformedDict[lhs.pathCmp] != nil {
             lhs_paths=keyTransformedDict[lhs.pathCmp]!
         }else{
@@ -312,6 +317,7 @@ class SortKey: Comparable {
             rhs_paths=rhs.path.replacingOccurrences(of: "file://", with: "").trimmingCharacters(in: CharacterSet(charactersIn: "/")).components(separatedBy: "/").map(){$0.removingPercentEncoding!.lowercased()}
             keyTransformedDict[rhs.pathCmp]=rhs_paths
         }
+        keyTransformedDictLock.unlock() // 解锁
         //0.17s
 
 //        return lhs.path<rhs.path
@@ -451,12 +457,13 @@ class DirModel {
     var isFiltered: Bool = false
     var lock: NSLock = NSLock()
     
-    func changeSortType(_ sortType: SortType, isSortFolderFirst: Bool, isSortUseFullPath: Bool){
+    func changeSortType(_ sortType: SortType, isSortFolderFirst: Bool, isSortUseFullPath: Bool, randomSeed: Int){
         let oldFiles=files
         files=Map<SortKeyFile,FileModel>()
         for oldFile in oldFiles {
             if let tmpKey=oldFile.0.copy() as? SortKeyFile{
                 tmpKey.sortType=sortType
+                tmpKey.seed=randomSeed
                 tmpKey.isSortFolderFirst=isSortFolderFirst
                 tmpKey.isSortUseFullPath=isSortUseFullPath
                 files[tmpKey]=oldFile.1
@@ -678,6 +685,14 @@ class TreeViewModel {
             if globalVar.autoHideToolbar && folderURL.path == "root" {
                 subFolders.insert(URL(fileURLWithPath: "/PlaceholderForAutoHideToolbar"), at: 0)
             }
+
+            if folderURL.path == "root" {
+                let tags = TaggingSystem.getAllTags().reversed()
+                for tag in tags {
+                    let tagURL = URL(string: "file:///VirtualTagFolder/\(tag)/")!
+                    subFolders.insert(tagURL, at: 0)
+                }
+            }
             
             let oldChildren=node.children
             node.children=[]
@@ -689,6 +704,9 @@ class TreeViewModel {
                 if name == "PlaceholderForAutoHideToolbar" {
                     name = "Hidden Volume"
                     fullPath = "file:///"
+                }
+                if subFolder.absoluteString.contains("VirtualTagFolder") {
+                    name = "Tag " + name
                 }
                 var newNode = TreeNode(name: name, fullPath: fullPath)
                 

@@ -29,7 +29,6 @@ class GlobalVar{
     var myFavoritesArray = ["/"]
     var WINDOW_LIMIT=16
     var windowNum=0
-    var randomSeed = Int.random(in: 0...Int.max)
     var toolbarIndex = 0
     var operationLogs: [String] = []
     var closedPaths: [String] = []
@@ -71,6 +70,10 @@ class GlobalVar{
     }
     var useQuickSearch = false
     var isEnterKeyToOpen = false
+    var clickEdgeToSwitchImage = false
+    var scrollMouseWheelToZoom = false
+    var openLastFolder = true
+    var homeFolder = "file:///"
     
     //可记忆设置变量
     var isFirstTimeUse = true

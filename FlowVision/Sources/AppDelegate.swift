@@ -42,6 +42,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var lockZoomMenuItem: NSMenuItem!
     @IBOutlet weak var activatePanScrollMenuItem: NSMenuItem!
     @IBOutlet weak var activatePanScrollReadmeMenuItem: NSMenuItem!
+    @IBOutlet weak var toggleRawUseEmbeddedThumbMenuItem: NSMenuItem!
+    @IBOutlet weak var toggleRawUseEmbeddedThumbReadmeMenuItem: NSMenuItem!
     
     var commonParentPath=""
     
@@ -96,9 +98,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             NSApp.appearance = nil
         }
         
+        if let openLastFolder = UserDefaults.standard.value(forKey: "openLastFolder") as? Bool {
+            globalVar.openLastFolder = openLastFolder
+        }
+        if let homeFolder = UserDefaults.standard.value(forKey: "homeFolder") as? String {
+            globalVar.homeFolder = homeFolder
+        }
         if let hasNormalExit = UserDefaults.standard.value(forKey: "hasNormalExit") as? Bool {
             if !hasNormalExit {
                 UserDefaults.standard.set("file:///", forKey: "lastFolder")
+                globalVar.homeFolder = "file:///"
             }
         }
         UserDefaults.standard.set(false, forKey: "hasNormalExit")
@@ -169,6 +178,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if let isEnterKeyToOpen = UserDefaults.standard.value(forKey: "isEnterKeyToOpen") as? Bool {
             globalVar.isEnterKeyToOpen = isEnterKeyToOpen
         }
+        if let clickEdgeToSwitchImage = UserDefaults.standard.value(forKey: "clickEdgeToSwitchImage") as? Bool {
+            globalVar.clickEdgeToSwitchImage = clickEdgeToSwitchImage
+        }
+        if let scrollMouseWheelToZoom = UserDefaults.standard.value(forKey: "scrollMouseWheelToZoom") as? Bool {
+            globalVar.scrollMouseWheelToZoom = scrollMouseWheelToZoom
+        }
         
         globalVar.myFavoritesArray = defaults.array(forKey: "globalVar.myFavoritesArray") as? [String] ?? [String]()
         
@@ -179,6 +194,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         historyMenu.removeAllItems()
         historyMenu.delegate = self
         viewMenu.delegate = self
+
+        // 初始化标签系统
+        TaggingSystem.initialize()
 
         log("结束applicationWillFinishLaunching")
     }
@@ -592,11 +610,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             lockRotationMenuItem.state = mainViewController.publicVar.isRotationLocked ? .on : .off
             lockZoomMenuItem.state = mainViewController.publicVar.isZoomLocked ? .on : .off
             activatePanScrollMenuItem.state = mainViewController.publicVar.isPanWhenZoomed ? .on : .off
+            toggleRawUseEmbeddedThumbMenuItem.state = mainViewController.publicVar.isRawUseEmbeddedThumb ? .on : .off
 
             lockRotationMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             lockZoomMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             activatePanScrollMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             activatePanScrollReadmeMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
+            toggleRawUseEmbeddedThumbMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
+            toggleRawUseEmbeddedThumbReadmeMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
         }
     }
     
@@ -871,6 +892,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     
     @IBAction func toggleActivatePanScrollReadme(_ sender: NSMenuItem){
         showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("pan-zoom-info", comment: "对于缩放后平移的说明..."), width: 300)
+    }
+
+    @IBAction func toggleRawUseEmbeddedThumb(_ sender: NSMenuItem){
+        getMainViewController()?.toggleRawUseEmbeddedThumb()
+    }
+    
+    @IBAction func toggleRawUseEmbeddedThumbReadme(_ sender: NSMenuItem){
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("raw-use-embeded-info", comment: "raw使用exif内嵌缩略图替代浏览的说明..."), width: 300)
     }
     
     @IBAction func toggleIsShowHiddenFile(_ sender: NSMenuItem){
