@@ -994,7 +994,7 @@ class LargeImageView: NSView {
         var result: NSSize?
         if let originalSize=file.originalSize{
             //判断是否Retina，NSScreen.main是当前具有键盘焦点的屏幕，通常是用户正在与之交互的屏幕
-            let scale = NSScreen.main?.backingScaleFactor ?? 1
+            let scale = 1.0 //NSScreen.main?.backingScaleFactor ?? 1
             result=NSSize(width: originalSize.width/scale, height: originalSize.height/scale)
             if file.rotate%2 == 1 {
                 result=NSSize(width: originalSize.height/scale, height: originalSize.width/scale)

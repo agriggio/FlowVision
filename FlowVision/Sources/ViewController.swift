@@ -1808,7 +1808,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     
     func adjustWindowImageActual(refSize:NSSize? = nil, firstShowThumb: Bool = false, animate: Bool = true){
         //let zoomSize=largeImageView.customZoomSize()
-        let scale = NSScreen.main?.backingScaleFactor ?? 1
+        let scale = 1.0 //NSScreen.main?.backingScaleFactor ?? 1
         var tmpSize=largeImageView.file.originalSize ?? NSSize(width: 800, height: 600)
         if refSize != nil {tmpSize=refSize!}
         tmpSize = NSSize(width: tmpSize.width/scale, height: tmpSize.height/scale)
@@ -1835,7 +1835,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 
     func adjustWindowPortable(refSize:NSSize? = nil, firstShowThumb: Bool, animate: Bool, justAdjustWindowFrame: Bool = false, isToCenter: Bool = false) {
         if publicVar.isInLargeView {
-            var scale = NSScreen.main?.backingScaleFactor ?? 1.0
+            var scale = 1.0 //NSScreen.main?.backingScaleFactor ?? 1.0
             if publicVar.isZoomLocked,
                let zoomLock = publicVar.zoomLock {
                 scale = scale / zoomLock
@@ -6526,7 +6526,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if file.type != .image {return}
 
         let url=URL(string:file.path)!
-        let scale = NSScreen.main?.backingScaleFactor ?? 1
+        let scale = 1.0 //NSScreen.main?.backingScaleFactor ?? 1
         let maxBounds=largeImageView.bounds
         //print(maxBounds)
         
@@ -6660,7 +6660,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             file.originalSize=file.imageInfo?.size
         }
         
-        let scale = NSScreen.main?.backingScaleFactor ?? 1
+        let scale = 1.0 //NSScreen.main?.backingScaleFactor ?? 1
         
         var maxBounds=largeImageView.imageView.bounds
         if resetSize{maxBounds=largeImageView.bounds}
