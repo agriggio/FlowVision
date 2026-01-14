@@ -67,7 +67,7 @@ class CustomProfile: Codable {
         }
     }
     var ThumbnailScrollbarWidth: Double {
-        return 16
+        return 15
     }
 
     //可扩展值
@@ -184,7 +184,7 @@ class PublicVar{
             if let largeImageView = viewController.largeImageView,
                isShowExif && largeImageView.exifTextView.textItems.isEmpty{
                 let exifData = convertExifData(file: largeImageView.file)
-                largeImageView.updateTextItems(formatExifData(exifData ?? [:]))
+                largeImageView.updateTextItems(formatExifData(exifData ?? [:], isVideo: globalVar.HandledVideoExtensions.contains(largeImageView.file.ext), needWarp: true))
             }
             viewController.largeImageView.exifTextView.isHidden = !isShowExif
             updateToolbar()
@@ -2751,8 +2751,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                         file.imageInfo = getImageInfo(url: url, needMetadata: true)
                     }
                     let exifData = convertExifData(file: file)
-                    var formatedExifData = formatExifData(exifData ?? [:])
-                    formatedExifData.insert((NSLocalizedString("File Path", comment: "文件路径"),url.path), at: 0)
+                    var formatedExifData = formatExifData(exifData ?? [:], isVideo: globalVar.HandledVideoExtensions.contains(ext), needWarp: false)
+                    formatedExifData.insert((NSLocalizedString("File Path", comment: "文件路径"),url.deletingLastPathComponent().path+"/"), at: 0)
                     
                     let separator = "--------------------"
                     
@@ -6812,7 +6812,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             //加载Exif
             if publicVar.isShowExif && resetSize {
                 let exifData = convertExifData(file: file)
-                largeImageView.updateTextItems(formatExifData(exifData ?? [:]))
+                largeImageView.updateTextItems(formatExifData(exifData ?? [:], isVideo: globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()), needWarp: true))
             }
             
             //用来对比异步任务是否过期
@@ -7326,7 +7326,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         alert.alertStyle = .informational
         
         let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
-        inputTextField.stringValue = "80"
+        inputTextField.stringValue = "60"
         alert.accessoryView = inputTextField
         
         alert.addButton(withTitle: NSLocalizedString("OK", comment: "确定"))
