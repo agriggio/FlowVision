@@ -2,8 +2,6 @@
 //  FFmpegKit.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/5.
-//
 
 import Foundation
 
@@ -12,11 +10,13 @@ class FFmpegKitWrapper {
 
     private var isFFmpegKitLoaded = false
     private var handle: UnsafeMutableRawPointer?
-    //private let syncQueue = DispatchQueue(label: "com.ffmpegkit.wrapper.syncQueue")
+    // private let syncQueue = DispatchQueue(label: "com.ffmpegkit.wrapper.syncQueue")
     private let lock = NSLock()
     var countBeforeLoaded = 0
     
-    private let LOAD_WHEN_USE=true // 是否使用时立即加载
+    // 是否使用时立即加载
+    // Whether to load immediately when used
+    private let LOAD_WHEN_USE=true
 
     private init() {}
     

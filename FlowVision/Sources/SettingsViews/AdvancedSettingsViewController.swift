@@ -2,8 +2,6 @@
 //  GeneralSettingsViewController.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/22.
-//
 
 import Cocoa
 import Settings
@@ -40,6 +38,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
 		super.viewDidLoad()
 
         // 初始化 slider、stepper 和标签
+        // Initialize slider, stepper and labels
         memUseLimitSlider.integerValue = globalVar.memUseLimit
         updateMemUseLimitLabel(value: Double(globalVar.memUseLimit))
         
@@ -68,6 +67,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
         }
         
         // 初始化 Radio Buttons
+        // Initialize Radio Buttons
         updateFFmpegRadioButtons()
 	}
 
@@ -80,6 +80,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     
     private func updateMemUseLimitLabel(value: Double) {
         // 将 slider 的值转换为合适的显示内容
+        // Convert slider value to appropriate display format
         let formattedValue: String
         if value < 1000 {
             formattedValue = "\(Int(value)) MB"
@@ -98,6 +99,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     
     private func updateThumbThreadNumLabel(value: Int) {
         // 更新 thumbThreadNumLabel 的显示内容
+        // Update thumbThreadNumLabel display content
         thumbThreadNumLabel.stringValue = "\(value)"
     }
     
@@ -116,6 +118,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     
     private func updateFolderSearchDepthLabel(value: Int) {
         // 更新 folderSearchDepthLabel 的显示内容
+        // Update folderSearchDepthLabel display content
         folderSearchDepthLabel.stringValue = "\(value)"
     }
     
@@ -128,6 +131,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     
     private func updateThumbThreadNumLabel_External(value: Int) {
         // 更新 thumbThreadNumLabel 的显示内容
+        // Update thumbThreadNumLabel display content
         thumbThreadNumLabel_External.stringValue = "\(value)"
     }
     
@@ -146,6 +150,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     
     private func updateFolderSearchDepthLabel_External(value: Int) {
         // 更新 folderSearchDepthLabel 的显示内容
+        // Update folderSearchDepthLabel display content
         folderSearchDepthLabel_External.stringValue = "\(value)"
     }
     
@@ -160,6 +165,7 @@ final class AdvancedSettingsViewController: NSViewController, SettingsPane {
     }
     private func updateFFmpegRadioButtons() {
         // 根据全局变量设置 Radio Buttons 的状态
+        // Set Radio Buttons state based on global variable
         useFFmpegRadioButton.state = globalVar.doNotUseFFmpeg ? .off : .on
         doNotUseFFmpegRadioButton.state = globalVar.doNotUseFFmpeg ? .on : .off
     }

@@ -2,8 +2,6 @@
 //  GeneralSettingsViewController.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/22.
-//
 
 import Cocoa
 import Settings
@@ -16,12 +14,14 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
     override var nibName: NSNib.Name? { "CustomSettingsViewController" }
 
     @IBOutlet weak var randomFolderThumbCheckbox: NSButton!
+    @IBOutlet weak var thumbnailOfFolderUseStackingCheckbox: NSButton!
     @IBOutlet weak var loopBrowsingCheckbox: NSButton!
     @IBOutlet weak var clickEdgeToSwitchImageCheckbox: NSButton!
     @IBOutlet weak var scrollMouseWheelToZoomCheckbox: NSButton!
     @IBOutlet weak var useInternalPlayerCheckbox: NSButton!
     @IBOutlet weak var usePinyinSearchCheckbox: NSButton!
     @IBOutlet weak var usePinyinInitialSearchCheckbox: NSButton!
+    @IBOutlet weak var keepFilterStateWhenSwitchFolderCheckbox: NSButton!
     @IBOutlet weak var excludeListView: NSOutlineView!
     @IBOutlet weak var excludeContainerView: NSView!
     @IBOutlet weak var refViewForExcludeListView: NSView!
@@ -38,12 +38,14 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
         super.viewDidLoad()
         
         randomFolderThumbCheckbox.state = globalVar.randomFolderThumb ? .on : .off
+        thumbnailOfFolderUseStackingCheckbox.state = globalVar.thumbnailOfFolderUseStacking ? .on : .off
         loopBrowsingCheckbox.state = globalVar.loopBrowsing ? .on : .off
         clickEdgeToSwitchImageCheckbox.state = globalVar.clickEdgeToSwitchImage ? .on : .off
         scrollMouseWheelToZoomCheckbox.state = globalVar.scrollMouseWheelToZoom ? .on : .off
         useInternalPlayerCheckbox.state = globalVar.useInternalPlayer ? .on : .off
         usePinyinSearchCheckbox.state = globalVar.usePinyinSearch ? .on : .off
         usePinyinInitialSearchCheckbox.state = globalVar.usePinyinInitialSearch ? .on : .off
+        keepFilterStateWhenSwitchFolderCheckbox.state = globalVar.keepFilterStateWhenSwitchFolder ? .on : .off
         
         globalVar.useInternalPlayerCheckbox = self.useInternalPlayerCheckbox
         
@@ -55,10 +57,12 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
         radioFullscreenForVideo.state = (!globalVar.blackBgAlwaysForVideo && globalVar.blackBgInFullScreenForVideo) ? .on : .off
 
         // 设置 OutlineView
+        // Set up OutlineView
         excludeListView.dataSource = self
         excludeListView.delegate = self
 
         // 根据refViewForExcludeListView的x、y设置excludeListView的x、y
+        // Set excludeListView x, y based on refViewForExcludeListView x, y
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             let refFrameInWindow = refViewForExcludeListView.convert(refViewForExcludeListView.bounds, to: nil)
@@ -67,6 +71,7 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
         }
         
         // 设置增减图标
+        // Set add/remove icons
         if let plusImage = NSImage(systemSymbolName: "plus", accessibilityDescription: "Add Item") {
             excludeListEditControl.setImage(plusImage, forSegment: 0)
         }
@@ -75,12 +80,18 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
         }
         
         // 已在AppDelegate中加载数据
+        // Data already loaded in AppDelegate
         excludeListView.reloadData()
     }
     
     @IBAction func randomFolderThumbToggled(_ sender: NSButton) {
         globalVar.randomFolderThumb = (sender.state == .on)
         UserDefaults.standard.set(globalVar.randomFolderThumb, forKey: "randomFolderThumb")
+    }
+    
+    @IBAction func thumbnailOfFolderUseStackingToggled(_ sender: NSButton) {
+        globalVar.thumbnailOfFolderUseStacking = (sender.state == .on)
+        UserDefaults.standard.set(globalVar.thumbnailOfFolderUseStacking, forKey: "thumbnailOfFolderUseStacking")
     }
     
     @IBAction func loopBrowsingToggled(_ sender: NSButton) {
@@ -158,10 +169,17 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
         globalVar.usePinyinInitialSearch = (sender.state == .on)
         UserDefaults.standard.set(globalVar.usePinyinInitialSearch, forKey: "usePinyinInitialSearch")
     }
+
+    @IBAction func keepFilterStateWhenSwitchFolderToggled(_ sender: NSButton) {
+        globalVar.keepFilterStateWhenSwitchFolder = (sender.state == .on)
+        UserDefaults.standard.set(globalVar.keepFilterStateWhenSwitchFolder, forKey: "keepFilterStateWhenSwitchFolder")
+    }
     
     @IBAction func segmentedControlValueChanged(_ sender: NSSegmentedControl) {
         switch sender.selectedSegment {
-        case 0: // 增加
+        case 0: 
+            // 增加
+            // Add
             let openPanel = NSOpenPanel()
             openPanel.canChooseDirectories = true
             openPanel.canChooseFiles = false
@@ -177,7 +195,9 @@ final class CustomSettingsViewController: NSViewController, SettingsPane {
                     UserDefaults.standard.set(globalVar.thumbnailExcludeList, forKey: "thumbnailExcludeList")
                 }
             }
-        case 1: // 删除
+        case 1: 
+            // 删除
+            // Delete
             let selectedRow = excludeListView.selectedRow
             if selectedRow >= 0 && selectedRow < globalVar.thumbnailExcludeList.count {
                 globalVar.thumbnailExcludeList.remove(at: selectedRow)

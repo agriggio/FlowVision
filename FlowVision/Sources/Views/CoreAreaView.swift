@@ -2,8 +2,6 @@
 //  CoreAreaView.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/5.
-//
 
 import Foundation
 import Cocoa
@@ -47,7 +45,7 @@ class CoreAreaView: NSView {
     
     override func awakeFromNib() {
         super.awakeFromNib()
-        registerForDraggedTypes([.fileURL])
+        registerForDraggedTypes([.fileURL] + NSFilePromiseReceiver.readableDraggedTypes.map { NSPasteboard.PasteboardType($0) })
     }
     
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -74,14 +72,39 @@ class CoreAreaView: NSView {
                     }
                 }
                 if let curFolderUrl = URL(string: viewController.fileDB.curFolder){
-                    viewController.handleMove(targetURL: curFolderUrl, pasteboard: sender.draggingPasteboard)
-                    if sender.draggingSource is CustomOutlineView {
-                        viewController.refreshTreeView()
+                    let pasteboard = sender.draggingPasteboard
+                    if viewController.handleFilePromiseDrop(targetURL: curFolderUrl, pasteboard: pasteboard) {
+                        return true
                     }
+                    viewController.handleMove(targetURL: curFolderUrl, pasteboard: pasteboard)
                     return true
                 }
             }
         }
         return false
+    }
+    
+    override func otherMouseDown(with event: NSEvent) {
+        // back
+        if event.buttonNumber == 3 {
+            if let viewController = getViewController(self) {
+                if viewController.publicVar.isInLargeView{
+                    viewController.previousLargeImage()
+                }else{
+                    viewController.handleHistoryBack()
+                }
+            }
+        // forward
+        } else if event.buttonNumber == 4 {
+            if let viewController = getViewController(self) {
+                if viewController.publicVar.isInLargeView{
+                    viewController.nextLargeImage()
+                }else{
+                    viewController.handleHistoryForward()
+                }
+            }
+        } else {
+            super.otherMouseDown(with: event)
+        }
     }
 }

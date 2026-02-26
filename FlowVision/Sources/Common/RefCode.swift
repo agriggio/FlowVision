@@ -2,8 +2,6 @@
 //  RefCode.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/5.
-//
 
 import Foundation
 
@@ -23,6 +21,7 @@ func startListeningForFileSystemEvents(in directoryPath: String) {
     stream = FSEventStreamCreate(kCFAllocatorDefault, callback, &context, pathsToWatch, FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 1.0, FSEventStreamCreateFlags(kFSEventStreamCreateFlagUseCFTypes | kFSEventStreamCreateFlagFileEvents))
     
     // 使用DispatchQueue替代RunLoop
+    // Use DispatchQueue instead of RunLoop
     if let stream = stream {
         FSEventStreamSetDispatchQueue(stream, DispatchQueue.global())
         FSEventStreamStart(stream)

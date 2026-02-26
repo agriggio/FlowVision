@@ -2,8 +2,6 @@
 //  GeneralSettingsViewController.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/7/22.
-//
 
 import Cocoa
 import Settings
@@ -14,9 +12,12 @@ final class GeneralSettingsViewController: NSViewController, SettingsPane {
     let toolbarItemIcon = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "")!
 
     override var nibName: NSNib.Name? { "GeneralSettingsViewController" }
+
+    @IBOutlet weak var scrollSensitivitySlider: NSSlider!
     
     @IBOutlet weak var terminateAfterLastWindowClosedCheckbox: NSButton!
     @IBOutlet weak var autoHideToolbarCheckbox: NSButton!
+    @IBOutlet weak var autoHideCursorWhenFullscreenCheckbox: NSButton!
     @IBOutlet weak var languagePopUpButton: NSPopUpButton!
 
     @IBOutlet weak var radioHomeFolder: NSButton!
@@ -28,16 +29,23 @@ final class GeneralSettingsViewController: NSViewController, SettingsPane {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        //self.preferredContentSize = NSSize(width: 600, height: 400)
+        // self.preferredContentSize = NSSize(width: 600, height: 400)
+        
+        // 初始化 scrollSensitivitySlider 和标签
+        // Initialize scrollSensitivitySlider and labels
+        scrollSensitivitySlider.doubleValue = globalVar.scrollSensitivity
         
         terminateAfterLastWindowClosedCheckbox.state = globalVar.terminateAfterLastWindowClosed ? .on : .off
         autoHideToolbarCheckbox.state = globalVar.autoHideToolbar ? .on : .off
+        autoHideCursorWhenFullscreenCheckbox.state = globalVar.autoHideCursorWhenFullscreen ? .on : .off
         
         // 初始化 NSPopUpButton 的选项
+        // Initialize NSPopUpButton options
         let autoTitle = NSLocalizedString("Auto", comment: "自动")
         languagePopUpButton.removeAllItems()
         languagePopUpButton.addItems(withTitles: [autoTitle, "Arabic(العربية)", "Chinese Simplified(简体中文)", "Chinese Traditional(繁體中文)", "Dutch(Nederlands)", "English(English)", "French(Français)", "German(Deutsch)", "Italian(Italiano)", "Japanese(日本語)", "Korean(한국어)", "Portuguese Brazil(Português)", "Portuguese Portugal(Português)", "Russian(Русский)", "Spanish(Español)", "Swedish(Svenska)"])
         // 设置初始选择
+        // Set initial selection
         if let languageCodes = UserDefaults.standard.array(forKey: "AppleLanguages") as? [String], let firstLanguage = languageCodes.first {
             switch firstLanguage {
             case let lang where lang.hasPrefix("en"):
@@ -134,6 +142,11 @@ final class GeneralSettingsViewController: NSViewController, SettingsPane {
     @IBAction func autoHideToolbarToggled(_ sender: NSButton) {
         UserDefaults.standard.set(sender.state, forKey: "autoHideToolbar")
     }
+
+    @IBAction func autoHideCursorWhenFullscreenToggled(_ sender: NSButton) {
+        globalVar.autoHideCursorWhenFullscreen = (sender.state == .on)
+        UserDefaults.standard.set(globalVar.autoHideCursorWhenFullscreen, forKey: "autoHideCursorWhenFullscreen")
+    }
     
     @IBAction func openSystemPreferences(_ sender: Any) {
         _ = requestAppleEventsPermission()
@@ -144,7 +157,8 @@ final class GeneralSettingsViewController: NSViewController, SettingsPane {
     @IBAction func setAsDefaultApp(_ sender: Any) {
 //        let fileTypes = ["public.jpeg", "public.png", "public.gif", "com.microsoft.bmp", "public.tiff", "public.heif", "org.webmproject.webp", "public.image", "public.heic"]
         guard let fileTypes = getSupportedFileTypes() else {
-            log("获取支持文件类型失败", level: .error)
+            log("Failed to get supported file types", level: .error)
+            // Failed to get supported file types
             return
         }
         let appBundleID = Bundle.main.bundleIdentifier!
@@ -221,5 +235,11 @@ final class GeneralSettingsViewController: NSViewController, SettingsPane {
             labelHomeFolder.stringValue = globalVar.homeFolder.removingPercentEncoding!.replacingOccurrences(of: "file://", with: "")
             UserDefaults.standard.set(globalVar.homeFolder, forKey: "homeFolder")
         }
+    }
+    
+    @IBAction func scrollSensitivitySliderChanged(_ sender: NSSlider) {
+        let newValue = sender.doubleValue
+        globalVar.scrollSensitivity = newValue
+        UserDefaults.standard.set(newValue, forKey: "scrollSensitivity")
     }
 }

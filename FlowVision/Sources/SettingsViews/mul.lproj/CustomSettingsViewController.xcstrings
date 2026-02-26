@@ -98,97 +98,97 @@
       }
     },
     "6Ac-mJ-ewA.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Only Fullscreen\"; ObjectID = \"6Ac-mJ-ewA\";",
+      "comment" : "Class = \"NSButtonCell\"; title = \"Black when Full Screen\"; ObjectID = \"6Ac-mJ-ewA\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ملء الشاشة فقط"
+            "value" : "أسود عند ملء الشاشة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur Vollbild"
+            "value" : "Schwarz im Vollbildmodus"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Only Fullscreen"
+            "value" : "Black when Full Screen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo pantalla completa"
+            "value" : "Negro en pantalla completa"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plein écran seulement"
+            "value" : "Noir en plein écran"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo schermo intero"
+            "value" : "Nero a schermo intero"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全画面のみ"
+            "value" : "全画面時は黒"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "전체 화면만"
+            "value" : "전체 화면 시 검정색"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen Volledig Scherm"
+            "value" : "Zwart bij Volledig Scherm"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Somente tela cheia"
+            "value" : "Preto em Tela Cheia"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apenas Ecrã Completo"
+            "value" : "Preto em Ecrã Total"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Только полноэкранный"
+            "value" : "Черный в полноэкранном режиме"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Endast helskärm"
+            "value" : "Svart i fullskärm"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅全屏时"
+            "value" : "仅全屏时黑色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅全螢幕"
+            "value" : "全螢幕時為黑色"
           }
         }
       }
@@ -289,102 +289,6 @@
         }
       }
     },
-    "7DQ-m2-6si.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Options when using Cmd + F for search, only effective in normal matching mode.\"; ObjectID = \"7DQ-m2-6si\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "خيارات عند استخدام Cmd + F للبحث، فعالة فقط في وضع المطابقة العادي."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optionen bei der Verwendung von Cmd + F für die Suche, nur im normalen Abgleichmodus wirksam."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Options when using Cmd + F for search, only effective in normal matching mode."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opciones al usar Cmd + F para buscar, solo efectivas en modo de coincidencia normal."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Options lors de l'utilisation de Cmd + F pour la recherche, uniquement efficace en mode de correspondance normal."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opzioni per la ricerca con Cmd + F, efficaci solo in modalità di corrispondenza normale."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cmd + F を使用した検索時のオプション、通常のマッチングモードでのみ有効です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cmd + F를 사용하여 검색할 때의 옵션으로, 일반 일치 모드에서만 효과적입니다."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opties bij het gebruik van Cmd + F voor zoeken, alleen effectief in de normale zoekmodus."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opções ao usar Cmd + F para busca, somente efetivas no modo de correspondência normal."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opções ao usar Cmd + F para pesquisa, apenas eficaz no modo de correspondência normal."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Параметры при использовании Cmd + F для поиска, действуют только в режиме нормального совпадения"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alternativ när du använder Cmd + F för sökning, endast effektivt i normalt matchningsläge."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用 Cmd + F 搜索时的选项，仅在普通匹配模式下生效。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在使用 Cmd + F 搜索時的選項，僅在正常匹配模式下有效"
-          }
-        }
-      }
-    },
     "7aF-tg-6Qj.title" : {
       "comment" : "Class = \"NSTextFieldCell\"; title = \"Exclude Directory:\"; ObjectID = \"7aF-tg-6Qj\";",
       "extractionState" : "extracted_with_value",
@@ -481,6 +385,198 @@
         }
       }
     },
+    "7DQ-m2-6si.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Options when using Cmd + F for search, only effective in normal matching mode.\"; ObjectID = \"7DQ-m2-6si\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خيارات عند استخدام Cmd + F للبحث، فعالة فقط في وضع المطابقة العادي."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optionen bei der Verwendung von Cmd + F für die Suche, nur im normalen Abgleichmodus wirksam."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Options when using Cmd + F for search, only effective in normal matching mode."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opciones al usar Cmd + F para buscar, solo efectivas en modo de coincidencia normal."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Options lors de l'utilisation de Cmd + F pour la recherche, uniquement efficace en mode de correspondance normal."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opzioni per la ricerca con Cmd + F, efficaci solo in modalità di corrispondenza normale."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cmd + F を使用した検索時のオプション、通常のマッチングモードでのみ有効です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cmd + F를 사용하여 검색할 때의 옵션으로, 일반 일치 모드에서만 효과적입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opties bij het gebruik van Cmd + F voor zoeken, alleen effectief in de normale zoekmodus."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opções ao usar Cmd + F para busca, somente efetivas no modo de correspondência normal."
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opções ao usar Cmd + F para pesquisa, apenas eficaz no modo de correspondência normal."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Параметры при использовании Cmd + F для поиска, действуют только в режиме нормального совпадения"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternativ när du använder Cmd + F för sökning, endast effektivt i normalt matchningsläge."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 Cmd + F 搜索时的选项，仅在普通匹配模式下生效。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在使用 Cmd + F 搜索時的選項，僅在正常匹配模式下有效"
+          }
+        }
+      }
+    },
+    "AIL-Oh-a8t.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Maintain State:\"; ObjectID = \"AIL-Oh-a8t\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الحفاظ على الحالة:"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Status beibehalten:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Maintain State:"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantener estado:"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "État de maintien :"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantieni stato:"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状態を維持"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상태 유지:"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Staat behouden:"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manter Estado:"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manter Estado:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поддерживать состояние:"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bibehåll tillstånd:"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "状态保持："
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "維持狀態："
+          }
+        }
+      }
+    },
     "Apw-rY-geq.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"For Chinese Use Pinyin Initials for Search\"; ObjectID = \"Apw-rY-geq\";",
       "extractionState" : "extracted_with_value",
@@ -573,6 +669,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "對於中文使用拼音首字母來搜尋"
+          }
+        }
+      }
+    },
+    "Bue-hM-I6g.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Folder Thumbnails Stacked Instead of Tiled\"; ObjectID = \"Bue-hM-I6g\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصغرات المجلدات مكدسة بدلاً من متراصة"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ordner-Miniaturansichten gestapelt statt gekachelt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Folder Thumbnails Stacked Instead of Tiled"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniaturas de carpetas apiladas en lugar de en mosaico"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniatures de dossiers empilées au lieu de juxtaposées"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniautine delle cartelle sovrapposte invece di affiancate"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダのサムネイルをタイル表示の代わりに積み重ねて表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "폴더 썸네일이 타일 대신 겹쳐져 있습니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapminiaturen van mappen gestapeld in plaats van betegeld"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniaturas de Pasta Empilhadas em Vez de Lado a Lado"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniaturas de Pastas Empilhadas em Vez de Lado a Lado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Эскизы папок сложены стопкой вместо плиток"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mappminiatyrer staplade istället för sida vid sida"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文件夹缩略图叠放而不是平铺"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "資料夾縮圖堆疊而非平鋪"
           }
         }
       }
@@ -765,6 +957,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "背景"
+          }
+        }
+      }
+    },
+    "j7K-4t-OSf.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Random Folder Thumbnail\"; ObjectID = \"j7K-4t-OSf\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "مصغرة مجلد عشوائي"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zufälliges Ordner-Miniaturbild"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Random Folder Thumbnail"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniatura aleatoria de carpeta"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniature de Dossier Aléatoire"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anteprima della cartella casuale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ランダムフォルダーサムネイル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "임의 폴더 썸네일"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Willekeurige Map Miniatuurafbeelding"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniatura Aleatória da Pasta"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Miniatura Aleatória da Pasta"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Случайная миниатюра папки"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slumpmässig Mappminiatyr "
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随机文件夹缩略图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隨機資料夾縮圖"
           }
         }
       }
@@ -1057,194 +1345,290 @@
         }
       }
     },
-    "Nbp-B1-O0u.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Only Fullscreen\"; ObjectID = \"Nbp-B1-O0u\";",
+    "Mne-y2-Qd1.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Keep Recursive and Filter State when Switching Directories\"; ObjectID = \"Mne-y2-Qd1\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "فقط ملء الشاشة"
+            "value" : "احتفظ بالحالة المتكررة والفلتر عند تبديل الدلائل"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nur Vollbild"
+            "value" : "Beibehalten des rekursiven und Filterstatus beim Wechseln von Verzeichnissen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Only Fullscreen"
+            "value" : "Keep Recursive and Filter State when Switching Directories"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo pantalla completa"
+            "value" : "Mantener el estado recursivo y de filtro al cambiar de directorios"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Plein écran uniquement"
+            "value" : "Conserver l'état récursif et de filtrage lors du changement de répertoires"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Solo schermo intero"
+            "value" : "Mantieni stato ricorsivo e filtro durante il cambio di directory"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全画面のみ"
+            "value" : "ディレクトリを切り替えるときに再帰とフィルター状態を保持"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "전체 화면만"
+            "value" : "디렉토리를 전환할 때 재귀 및 필터 상태 유지"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alleen Volledig Scherm"
+            "value" : "Behoud recursieve en filterstatus bij het wisselen van mappen"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Somente tela cheia"
+            "value" : "Manter estado recursivo e de filtro ao trocar de diretórios"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apenas Ecrã Inteiro"
+            "value" : "Manter estado recursivo e de filtro ao mudar de diretórios"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Только полноэкранный"
+            "value" : "Сохранять рекурсивное и фильтрующее состояние при переключении директорий"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Endast helskärm"
+            "value" : "Behåll rekursivt och filtertillstånd vid byte av kataloger"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅全屏时"
+            "value" : "切换目录时保持递归和过滤状态"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅全螢幕"
+            "value" : "切換目錄時保持遞迴和篩選狀態"
           }
         }
       }
     },
-    "QHt-c1-9Ji.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Image View:\"; ObjectID = \"QHt-c1-9Ji\";",
+    "Nbp-B1-O0u.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Black when Full Screen\"; ObjectID = \"Nbp-B1-O0u\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "عرض الصورة:"
+            "value" : "أسود عند ملء الشاشة"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bildansicht:"
+            "value" : "Schwarz im Vollbildmodus"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Image View:"
+            "value" : "Black when Full Screen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vista de imagen:"
+            "value" : "Negro en pantalla completa"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vue de l'image :"
+            "value" : "Noir en plein écran"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vista immagine:"
+            "value" : "Nero a schermo intero"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "イメージビュー"
+            "value" : "全画面時は黒"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이미지 보기:"
+            "value" : "전체 화면 시 검정색"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Beeldweergave:"
+            "value" : "Zwart bij Volledig Scherm"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Visualização de Imagem:"
+            "value" : "Preto em Tela Cheia"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vista de Imagem:"
+            "value" : "Preto em Ecrã Total"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Просмотр изображения:"
+            "value" : "Черный в полноэкранном режиме"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bildvy:"
+            "value" : "Svart i helskärm"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "图像视图："
+            "value" : "仅全屏时黑色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "影像檢視"
+            "value" : "全螢幕時為黑色"
+          }
+        }
+      }
+    },
+    "pgf-uX-6Yv.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Video View:\"; ObjectID = \"pgf-uX-6Yv\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "عرض الفيديو"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videoansicht:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Video View:"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vista de video:"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Affichage vidéo :"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visualizzazione video:"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビデオビュー："
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비디오 보기:"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videoweergave:"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Visualização do vídeo:"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vista de Vídeo:"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Просмотр видео:"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videovy:"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "视频视图："
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "影片視圖："
           }
         }
       }
@@ -1345,98 +1729,98 @@
         }
       }
     },
-    "QqU-Xz-7dB.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Return to the first image after the last, and vice versa.\"; ObjectID = \"QqU-Xz-7dB\";",
-      "extractionState" : "stale",
+    "QHt-c1-9Ji.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Image View:\"; ObjectID = \"QHt-c1-9Ji\";",
+      "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "العودة إلى الصورة الأولى بعد الأخيرة، والعكس بالعكس."
+            "value" : "عرض الصورة:"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nach dem letzten Bild zum ersten Bild zurückkehren und umgekehrt."
+            "value" : "Bildansicht:"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Return to the first image after the last, and vice versa."
+            "value" : "Image View:"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volver a la primera imagen después de la última, y viceversa."
+            "value" : "Vista de imagen:"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Revenir à la première image après la dernière, et vice-versa."
+            "value" : "Vue de l'image :"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Torna alla prima immagine dopo l'ultima, e viceversa."
+            "value" : "Vista immagine:"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最後の画像の後に最初の画像に戻り、その逆も行います。"
+            "value" : "イメージビュー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "마지막 이미지 후 첫 번째 이미지로 돌아가고 그 반대도 마찬가지입니다."
+            "value" : "이미지 보기:"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Keer terug naar de eerste afbeelding na de laatste, en vice versa."
+            "value" : "Beeldweergave:"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Retornar à primeira imagem após a última e vice-versa."
+            "value" : "Visualização de Imagem:"
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voltar à primeira imagem após a última, e vice-versa."
+            "value" : "Vista de Imagem:"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вернуться к первому изображению после последнего и наоборот."
+            "value" : "Просмотр изображения:"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Återgå till den första bilden efter den sista, och vice versa."
+            "value" : "Bildvy:"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到达最后一张后返回第一张，反之亦然。"
+            "value" : "图像视图："
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在最後一張圖後返回第一張，反之亦然"
+            "value" : "影像檢視"
           }
         }
       }
@@ -1533,6 +1917,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "黑色"
+          }
+        }
+      }
+    },
+    "sUH-oK-7AD.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Glass\"; ObjectID = \"sUH-oK-7AD\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "زجاج"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glas"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Glass"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cristal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verre"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vetro"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ガラス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유리"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glas"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidro"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vidro"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Стекло"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glas"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "玻璃"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "玻璃"
           }
         }
       }
@@ -1729,390 +2209,6 @@
         }
       }
     },
-    "Z13-dJ-JBv.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"For directories in the exclusion list, images within them will not be used when generating thumbnails for themselves or their parent folders.\"; ObjectID = \"Z13-dJ-JBv\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "بالنسبة إلى الدلائل في قائمة الاستبعاد، لن تُستخدم الصور بداخلها عند إنشاء الصور المصغرة لأنفسها أو لمجلداتها الرئيسية."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Für Verzeichnisse in der Ausschlussliste werden Bilder darin nicht verwendet, wenn Thumbnails für sie selbst oder ihre übergeordneten Ordner erstellt werden."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "For directories in the exclusion list, images within them will not be used when generating thumbnails for themselves or their parent folders."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para los directorios en la lista de exclusión, las imágenes dentro de ellos no se utilizarán al generar miniaturas para ellos mismos o sus carpetas principales."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pour les répertoires de la liste d'exclusion, les images qu'ils contiennent ne seront pas utilisées lors de la génération de vignettes pour eux-mêmes ou leurs dossiers parents."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Per le directory nell'elenco di esclusione, le immagini al loro interno non saranno utilizzate quando si generano le miniature per le directory stesse o per le cartelle superiori."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "除外リスト内のディレクトリにある画像は、ディレクトリ自体または親フォルダのサムネイル生成時に使用されません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제외 목록에 있는 디렉토리에 대해, 그 안의 이미지는 자신이나 부모 폴더의 썸네일 생성 시 사용되지 않습니다"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voor mappen in de uitsluitingslijst worden afbeeldingen daarin niet gebruikt bij het genereren van miniaturen voor henzelf of hun bovenliggende mappen."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para diretórios na lista de exclusão, as imagens dentro deles não serão usadas ao gerar miniaturas para eles mesmos ou suas pastas principais."
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para diretórios na lista de exclusão, imagens dentro deles não serão usadas ao gerar miniaturas para eles próprios ou suas pastas-mãe."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Для каталогов в списке исключений изображения внутри них не будут использоваться при создании эскизов для них самих или их родительских папок."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "För kataloger i exkluderingslistan kommer bilder i dessa inte att användas vid generering av miniatyrer för dem själva eller deras överordnade mappar."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "对于在排除列表中的目录，生成自身和其父级文件夹缩略图时不会使用其中的图像。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在排除清單中的目錄中，生成它們自身或其父檔案夾的縮圖時，其內的圖片將不會被使用"
-          }
-        }
-      }
-    },
-    "j7K-4t-OSf.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Random Folder Thumbnail\"; ObjectID = \"j7K-4t-OSf\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "مصغرة مجلد عشوائي"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zufälliges Ordner-Miniaturbild"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Random Folder Thumbnail"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miniatura aleatoria de carpeta"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miniature de Dossier Aléatoire"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Anteprima della cartella casuale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ランダムフォルダーサムネイル"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "임의 폴더 썸네일"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Willekeurige Map Miniatuurafbeelding"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miniatura Aleatória da Pasta"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Miniatura Aleatória da Pasta"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Случайная миниатюра папки"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Slumpmässig Mappminiatyr "
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "随机文件夹缩略图"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隨機資料夾縮圖"
-          }
-        }
-      }
-    },
-    "pgf-uX-6Yv.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Video View:\"; ObjectID = \"pgf-uX-6Yv\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "عرض الفيديو"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Videoansicht:"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Video View:"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vista de video:"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Affichage vidéo :"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Visualizzazione video:"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ビデオビュー："
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "비디오 보기:"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Videoweergave:"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Visualização do vídeo:"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vista de Vídeo:"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Просмотр видео:"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Videovy:"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "视频视图："
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "影片視圖："
-          }
-        }
-      }
-    },
-    "sUH-oK-7AD.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Glass\"; ObjectID = \"sUH-oK-7AD\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "زجاج"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glas"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Glass"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cristal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verre"
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vetro"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ガラス"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유리"
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glas"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vidro"
-          }
-        },
-        "pt-PT" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vidro"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Стекло"
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glas"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "玻璃"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "玻璃"
-          }
-        }
-      }
-    },
     "yBn-Nt-UPF.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"For Chinese Use Full Pinyin for Search\"; ObjectID = \"yBn-Nt-UPF\";",
       "extractionState" : "extracted_with_value",
@@ -2209,98 +2305,98 @@
         }
       }
     },
-    "zOi-UL-JWi.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Use Internal Video Player\"; ObjectID = \"zOi-UL-JWi\";",
+    "Z13-dJ-JBv.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"For directories in the exclusion list, images within them will not be used when generating thumbnails for themselves or their parent folders.\"; ObjectID = \"Z13-dJ-JBv\";",
       "extractionState" : "extracted_with_value",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "استخدام مشغل الفيديو الداخلي"
+            "value" : "بالنسبة إلى الدلائل في قائمة الاستبعاد، لن تُستخدم الصور بداخلها عند إنشاء الصور المصغرة لأنفسها أو لمجلداتها الرئيسية."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Internen Videoplayer verwenden"
+            "value" : "Für Verzeichnisse in der Ausschlussliste werden Bilder darin nicht verwendet, wenn Thumbnails für sie selbst oder ihre übergeordneten Ordner erstellt werden."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Use Internal Video Player"
+            "value" : "For directories in the exclusion list, images within them will not be used when generating thumbnails for themselves or their parent folders."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usar Reproductor de Video Interno"
+            "value" : "Para los directorios en la lista de exclusión, las imágenes dentro de ellos no se utilizarán al generar miniaturas para ellos mismos o sus carpetas principales."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Utiliser le lecteur vidéo interne"
+            "value" : "Pour les répertoires de la liste d'exclusion, les images qu'ils contiennent ne seront pas utilisées lors de la génération de vignettes pour eux-mêmes ou leurs dossiers parents."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usa il lettore video interno"
+            "value" : "Per le directory nell'elenco di esclusione, le immagini al loro interno non saranno utilizzate quando si generano le miniature per le directory stesse o per le cartelle superiori."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "内部ビデオプレーヤーを使用"
+            "value" : "除外リスト内のディレクトリにある画像は、ディレクトリ自体または親フォルダのサムネイル生成時に使用されません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내부 비디오 플레이어 사용"
+            "value" : "제외 목록에 있는 디렉토리에 대해, 그 안의 이미지는 자신이나 부모 폴더의 썸네일 생성 시 사용되지 않습니다"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Interne videospeler gebruiken"
+            "value" : "Voor mappen in de uitsluitingslijst worden afbeeldingen daarin niet gebruikt bij het genereren van miniaturen voor henzelf of hun bovenliggende mappen."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usar reprodutor de vídeo interno"
+            "value" : "Para diretórios na lista de exclusão, as imagens dentro deles não serão usadas ao gerar miniaturas para eles mesmos ou suas pastas principais."
           }
         },
         "pt-PT" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Utilizar Leitor de Vídeo Interno"
+            "value" : "Para diretórios na lista de exclusão, imagens dentro deles não serão usadas ao gerar miniaturas para eles próprios ou suas pastas-mãe."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Использовать встроенный видеоплеер"
+            "value" : "Для каталогов в списке исключений изображения внутри них не будут использоваться при создании эскизов для них самих или их родительских папок."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Använd intern videospelare"
+            "value" : "För kataloger i exkluderingslistan kommer bilder i dessa inte att användas vid generering av miniatyrer för dem själva eller deras överordnade mappar."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用内置视频播放器"
+            "value" : "对于在排除列表中的目录，生成自身和其父级文件夹缩略图时不会使用其中的图像。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用內部視頻播放器"
+            "value" : "在排除清單中的目錄中，生成它們自身或其父檔案夾的縮圖時，其內的圖片將不會被使用"
           }
         }
       }
@@ -2397,6 +2493,102 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "黑色"
+          }
+        }
+      }
+    },
+    "zOi-UL-JWi.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Use Internal Video Player\"; ObjectID = \"zOi-UL-JWi\";",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "استخدام مشغل الفيديو الداخلي"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Internen Videoplayer verwenden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Use Internal Video Player"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar Reproductor de Video Interno"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser le lecteur vidéo interne"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa il lettore video interno"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "内部ビデオプレーヤーを使用"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내부 비디오 플레이어 사용"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interne videospeler gebruiken"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar reprodutor de vídeo interno"
+          }
+        },
+        "pt-PT" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizar Leitor de Vídeo Interno"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Использовать встроенный видеоплеер"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Använd intern videospelare"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用内置视频播放器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用內部視頻播放器"
           }
         }
       }

@@ -2,8 +2,6 @@
 //  WindowController.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/3/16.
-//
 
 import Cocoa
 
@@ -11,11 +9,12 @@ class WindowController: NSWindowController, NSWindowDelegate {
     
     var pathShortenStore = ""
     var windowFrameBeforeFullScreen: NSRect?
+    var cursorHideTimer: Timer?
 
     override func windowDidLoad() {
         super.windowDidLoad()
         
-        log("开始windowDidLoad")
+        log("Start windowDidLoad")
         
         self.window?.delegate = self
         
@@ -23,18 +22,20 @@ class WindowController: NSWindowController, NSWindowDelegate {
 
         if let window = self.window {
             // 设置标题栏和工具栏合并效果
+            // Set title bar and toolbar merge effect
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = false
             window.isMovableByWindowBackground = false
             
             // 创建并配置工具栏
+            // Create and configure toolbar
             globalVar.toolbarIndex += 1
             let toolbar = NSToolbar(identifier: "MainToolbar"+String(globalVar.toolbarIndex))
             toolbar.delegate = self
             toolbar.allowsUserCustomization = false
             toolbar.autosavesConfiguration = false
             toolbar.displayMode = .iconOnly
-            //toolbar.showsBaselineSeparator = true
+            // toolbar.showsBaselineSeparator = true
             window.toolbar = toolbar
 
             window.acceptsMouseMovedEvents = true
@@ -62,16 +63,18 @@ class WindowController: NSWindowController, NSWindowDelegate {
             }
         }
         
-        //设置焦点
+        // 设置焦点
+        // Set focus
         if let viewController = contentViewController as? ViewController {
             window?.makeFirstResponder(viewController.collectionView)
         }
         
-        log("结束windowDidLoad")
+        log("End windowDidLoad")
     }
     
     func prepareForDeinit() {
         saveWindowState()
+        cancelCursorHideTimer()
     }
     
     func saveWindowState() {
@@ -87,6 +90,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
     
     func windowWillClose(_ notification: Notification) {
         // 移除引用
+        // Remove reference
         if let window = notification.object as? NSWindow {
             log("Window \(window) will close")
             if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
@@ -95,6 +99,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
         }
         
         // 在窗口关闭时执行清理，例如，保存数据、释放资源等
+        // Perform cleanup when window closes, e.g., save data, release resources
         if let viewController = contentViewController as? ViewController {
             viewController.largeImageView.prepareForDeinit()
             viewController.prepareForDeinit()
@@ -104,7 +109,9 @@ class WindowController: NSWindowController, NSWindowDelegate {
         globalVar.windowNum -= 1
         log("Window closed, remain: " + String(globalVar.windowNum))
         if globalVar.windowNum == 0 && globalVar.terminateAfterLastWindowClosed {
-            DispatchQueue.main.async { // 不这样会导致windowWillClose被调用两遍
+            // 不这样会导致windowWillClose被调用两遍
+            // Not doing this will cause windowWillClose to be called twice
+            DispatchQueue.main.async {
                 NSApplication.shared.terminate(nil)
             }
         }
@@ -120,15 +127,22 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
 
     // 在窗口将要进入全屏模式时执行
+    // Execute when window is about to enter full screen mode
     func windowWillEnterFullScreen(_ notification: Notification) {
         guard let window = self.window else { return }
         // 保存当前窗口大小
+        // Save current window size
         windowFrameBeforeFullScreen = window.frame
     }
     
     // 在窗口已经进入全屏模式时执行
+    // Execute when window has entered full screen mode
     func windowDidEnterFullScreen(_ notification: Notification) {
         guard let viewController = contentViewController as? ViewController else {return}
+        
+        // 启动延迟隐藏光标的定时器
+        // Start timer to delay hiding cursor
+        scheduleCursorHide()
 
         if !globalVar.autoHideToolbar {
             window?.titlebarAppearsTransparent = true
@@ -145,8 +159,14 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
     
     // 在窗口已经退出全屏模式时执行
+    // Execute when window has exited full screen mode
     func windowDidExitFullScreen(_ notification: Notification) {
         guard let viewController = contentViewController as? ViewController else {return}
+        
+        // 取消光标隐藏定时器并显示光标
+        // Cancel cursor hide timer and show cursor
+        cancelCursorHideTimer()
+        NSCursor.unhide()
 
         if !globalVar.autoHideToolbar {
             if window?.toolbar?.isVisible == false {
@@ -184,6 +204,14 @@ class WindowController: NSWindowController, NSWindowDelegate {
         guard let toolbar = window.toolbar else { return }
         guard let viewController = contentViewController as? ViewController else {return}
         let location = event.locationInWindow
+        
+        // 在全屏模式下，鼠标移动时显示光标并重置隐藏定时器
+        // In full screen mode, show cursor when mouse moves and reset hide timer
+        if window.styleMask.contains(.fullScreen) {
+            NSCursor.unhide()
+            scheduleCursorHide()
+        }
+        
         if globalVar.autoHideToolbar {
             if location.y > window.frame.height - 40 {
                 showTitleBar()
@@ -208,6 +236,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
     
     // 显示标题栏和工具栏
+    // Show title bar and toolbar
     func showTitleBar() {
         guard let window = window else { return }
         guard let toolbar = window.toolbar else { return }
@@ -220,6 +249,7 @@ class WindowController: NSWindowController, NSWindowDelegate {
     }
     
     // 隐藏标题栏和工具栏
+    // Hide title bar and toolbar
     func hideTitleBar() {
         guard let window = window else { return }
         guard let toolbar = window.toolbar else { return }
@@ -229,6 +259,30 @@ class WindowController: NSWindowController, NSWindowDelegate {
         window.standardWindowButton(.zoomButton)?.isHidden = true
         window.titlebarAppearsTransparent = true
         toolbar.isVisible = false
+    }
+    
+    // 安排延迟隐藏光标（在全屏模式下，鼠标停止移动后1秒隐藏）
+    // Schedule delayed cursor hiding (in full screen mode, hide cursor 1 second after mouse stops moving)
+    func scheduleCursorHide() {
+        cancelCursorHideTimer()
+        if globalVar.autoHideCursorWhenFullscreen {
+            cursorHideTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: false) { [weak self] _ in
+                guard let self = self else { return }
+                guard let window = self.window else { return }
+                if window.styleMask.contains(.fullScreen),
+                   NSApp.keyWindow === window,
+                   window.frame.contains(NSEvent.mouseLocation) {
+                    NSCursor.hide()
+                }
+            }
+        }
+    }
+    
+    // 取消光标隐藏定时器
+    // Cancel cursor hide timer
+    func cancelCursorHideTimer() {
+        cursorHideTimer?.invalidate()
+        cursorHideTimer = nil
     }
 }
 
@@ -269,10 +323,10 @@ extension WindowController: NSToolbarDelegate {
     }
     
     func getItemIdentifiers() -> [NSToolbarItem.Identifier] {
-        //, .flexibleSpace, .space
+        // , .flexibleSpace, .space
         var identifiers: [NSToolbarItem.Identifier] = [.sidebar, .favorites, .goBack, .goForward]
         
-        //identifiers.append(.upFolder)
+        // identifiers.append(.upFolder)
         
         if let viewController = contentViewController as? ViewController {
             if viewController.publicVar.isInLargeView {
@@ -289,7 +343,7 @@ extension WindowController: NSToolbarDelegate {
                     identifiers.append(.zoomOut)
                     identifiers.append(.zoomIn)
                 }
-                //identifiers.append(.rotateL)
+                // identifiers.append(.rotateL)
                 identifiers.append(.rotateR)
                 identifiers.append(.showinfo)
             }else{
@@ -319,7 +373,7 @@ extension WindowController: NSToolbarDelegate {
         }
         
         if #available(macOS 26.0, *) {
-            
+            identifiers.append(.space)
         }else{
             identifiers.append(NSToolbarItem.Identifier("CustomSeparator"))
         }
@@ -333,17 +387,20 @@ extension WindowController: NSToolbarDelegate {
     func updateToolbar() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let toolbar = window?.toolbar else { return }
-            let itemIdentifiers = getItemIdentifiers()
-            
-            while toolbar.items.count > 0 {
-                toolbar.removeItem(at: 0)
-            }
-            
-            for (index, identifier) in itemIdentifiers.enumerated() {
-                toolbar.insertItem(withItemIdentifier: identifier, at: index)
-            }
-            
+            updateToolbarSync()
+        }
+    }
+    
+    func updateToolbarSync() {
+        guard let toolbar = window?.toolbar else { return }
+        let itemIdentifiers = getItemIdentifiers()
+        
+        while toolbar.items.count > 0 {
+            toolbar.removeItem(at: 0)
+        }
+        
+        for (index, identifier) in itemIdentifiers.enumerated() {
+            toolbar.insertItem(withItemIdentifier: identifier, at: index)
         }
     }
     
@@ -351,10 +408,10 @@ extension WindowController: NSToolbarDelegate {
         let toolbarItem = NSToolbarItem(itemIdentifier: itemIdentifier)
         guard let viewController = contentViewController as? ViewController else {return toolbarItem}
         
-        //let titleFontColor = NSApp.effectiveAppearance.name == .darkAqua ? hexToNSColor(hex: "#FFFFFF", alpha: 0.847) : hexToNSColor(hex: "#000000", alpha: 0.847)
-        //let titleFontColor = NSApp.effectiveAppearance.name == .darkAqua ? hexToNSColor(hex: "#FFFFFF", alpha: 0.64) : hexToNSColor(hex: "#000000", alpha: 0.6)
+        // let titleFontColor = NSApp.effectiveAppearance.name == .darkAqua ? hexToNSColor(hex: "#FFFFFF", alpha: 0.847) : hexToNSColor(hex: "#000000", alpha: 0.847)
+        // let titleFontColor = NSApp.effectiveAppearance.name == .darkAqua ? hexToNSColor(hex: "#FFFFFF", alpha: 0.64) : hexToNSColor(hex: "#000000", alpha: 0.6)
         let titleFontColor = NSColor.labelColor
-        //let titleFontColor = NSColor.controlTextColor
+        // let titleFontColor = NSColor.controlTextColor
         
         switch itemIdentifier {
             
@@ -367,8 +424,8 @@ extension WindowController: NSToolbarDelegate {
             toolbarItem.view = titleLabel
             toolbarItem.minSize = NSSize(width: 200, height: titleLabel.fittingSize.height)
             toolbarItem.maxSize = NSSize(width: 10000, height: titleLabel.fittingSize.height)
-            //toolbarItem.minSize = titleLabel.fittingSize
-            //toolbarItem.maxSize = titleLabel.fittingSize
+            // toolbarItem.minSize = titleLabel.fittingSize
+            // toolbarItem.maxSize = titleLabel.fittingSize
             toolbarItem.label = NSLocalizedString("Window Title", comment: "窗口标题")
             toolbarItem.paletteLabel = NSLocalizedString("Window Title", comment: "窗口标题")
             toolbarItem.visibilityPriority = .high
@@ -382,8 +439,8 @@ extension WindowController: NSToolbarDelegate {
             toolbarItem.view = titleLabel
 //            toolbarItem.minSize = NSSize(width: 200, height: titleLabel.fittingSize.height)
 //            toolbarItem.maxSize = NSSize(width: 10000, height: titleLabel.fittingSize.height)
-            //toolbarItem.minSize = titleLabel.fittingSize
-            //toolbarItem.maxSize = titleLabel.fittingSize
+            // toolbarItem.minSize = titleLabel.fittingSize
+            // toolbarItem.maxSize = titleLabel.fittingSize
             toolbarItem.label = NSLocalizedString("Window Title", comment: "窗口标题")
             toolbarItem.paletteLabel = NSLocalizedString("Window Title", comment: "窗口标题")
             toolbarItem.visibilityPriority = .high
@@ -429,7 +486,9 @@ extension WindowController: NSToolbarDelegate {
                 rootItem.myUrl = URL(string: "file:///")
                 pathItems.insert(rootItem, at: 0)
                 
-                var maxWidth = (window?.frame.width ?? 1000) - 600 // 指定总宽度
+                // 指定总宽度
+                // Specify total width
+                var maxWidth = (window?.frame.width ?? 1000) - 600
                 if viewController.publicVar.autoPlayVisibleVideo {
                     maxWidth -= 45
                 }
@@ -446,8 +505,11 @@ extension WindowController: NSToolbarDelegate {
                 var startIndex = pathItems.count - 1
                 
                 // 从后往前计算每个路径项的实际宽度
+                // Calculate actual width of each path item from back to front
                 for i in (0..<pathItems.count).reversed() {
-                    let itemWidth = pathItems[i].title.size(withAttributes: [.font: font]).width + 15 // 15为分隔符宽度
+                    // 15为分隔符宽度
+                    // 15 is separator width
+                    let itemWidth = pathItems[i].title.size(withAttributes: [.font: font]).width + 15
                     totalWidth += itemWidth
                     if totalWidth > maxWidth {
                         startIndex = i + 1
@@ -456,11 +518,13 @@ extension WindowController: NSToolbarDelegate {
                 }
 
                 // 最后一个时已经超过
+                // When the last one already exceeds
                 if startIndex == pathItems.count {
                     startIndex = pathItems.count - 1
                 }
                 
                 // 如果超过最大字符数,替换前面的为...
+                // If exceeds maximum characters, replace preceding ones with ...
                 if totalWidth > maxWidth && startIndex != 0 {
                     let item = CustomPathControlItem()
                     item.title = "..."
@@ -540,7 +604,7 @@ extension WindowController: NSToolbarDelegate {
             
         case .viewToggle:
             let segmentedControl = NSSegmentedControl(images: [
-                //NSImage(systemSymbolName: "rectangle.grid.1x2", accessibilityDescription: "Justified")!,
+                // NSImage(systemSymbolName: "rectangle.grid.1x2", accessibilityDescription: "Justified")!,
                 NSImage(systemSymbolName: "squares.below.rectangle", accessibilityDescription: "Justified")!,
                 NSImage(systemSymbolName: "rectangle.3.offgrid", accessibilityDescription: "Waterfall")!,
                 NSImage(systemSymbolName: "rectangle.grid.2x2", accessibilityDescription: "Grid")!
@@ -553,7 +617,7 @@ extension WindowController: NSToolbarDelegate {
             toolbarItem.view = segmentedControl
             toolbarItem.label = NSLocalizedString("View", comment: "视图")
             toolbarItem.paletteLabel = NSLocalizedString("View", comment: "视图")
-            //toolbarItem.toolTip = NSLocalizedString("View", comment: "视图")
+            // toolbarItem.toolTip = NSLocalizedString("View", comment: "视图")
             toolbarItem.visibilityPriority = .low
             
         case .ontop:
@@ -660,13 +724,13 @@ extension WindowController: NSToolbarDelegate {
                 }
                 switch viewController.publicVar.profile.sortType {
                 case .pathA,.extA,.sizeA,.createDateA,.modDateA,.addDateA,.exifDateA,.exifPixelA:
-                    //image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: "")!
-                    //image = NSImage(systemSymbolName: "arrowtriangle.up", accessibilityDescription: "")!
+                    // image = NSImage(systemSymbolName: "arrow.up", accessibilityDescription: "")!
+                    // image = NSImage(systemSymbolName: "arrowtriangle.up", accessibilityDescription: "")!
                     image = NSImage(systemSymbolName: "chevron.up.circle", accessibilityDescription: "")!
                 case .pathZ,.extZ,.sizeZ,.createDateZ,.modDateZ,.addDateZ,.exifDateZ,.exifPixelZ:
                     image = NSImage(systemSymbolName: "chevron.down.circle", accessibilityDescription: "")!
                 case .random:
-                    //image = NSImage(systemSymbolName: "arrow.up.arrow.down.circle", accessibilityDescription: "")!
+                    // image = NSImage(systemSymbolName: "arrow.up.arrow.down.circle", accessibilityDescription: "")!
                     image = NSImage(systemSymbolName: "arrow.2.circlepath", accessibilityDescription: "")!
                 }
             }
@@ -675,10 +739,11 @@ extension WindowController: NSToolbarDelegate {
             setButtonStyle(button)
             
             // 自定义title的字体大小和颜色
+            // Customize title font size and color
             let font = NSFont.systemFont(ofSize: 13)
             let attributedTitle = NSAttributedString(string: title, attributes: [
                 .font: font,
-                //.foregroundColor: titleFontColor
+                // .foregroundColor: titleFontColor
             ])
             button.attributedTitle = attributedTitle
             button.toolTip = NSLocalizedString("Sort Order", comment: "排序方式")
@@ -708,7 +773,7 @@ extension WindowController: NSToolbarDelegate {
         case .isSearchFilterOn:
             let button = NSButton(title: "", image: NSImage(systemSymbolName: "f.circle.fill", accessibilityDescription: "")!, target: self, action: #selector(toggleSearchFilter(_:)))
             setButtonStyle(button)
-            //button.showsBorderOnlyWhileMouseInside = false
+            // button.showsBorderOnlyWhileMouseInside = false
             button.toolTip = NSLocalizedString("Cancel Filter", comment: "取消过滤")
             toolbarItem.view = button
             toolbarItem.label = NSLocalizedString("Cancel Filter", comment: "取消过滤")
@@ -718,7 +783,7 @@ extension WindowController: NSToolbarDelegate {
         case .isRecursiveMode:
             let button = NSButton(title: "", image: NSImage(systemSymbolName: "r.circle.fill", accessibilityDescription: "")!, target: self, action: #selector(toggleRecursiveMode(_:)))
             setButtonStyle(button)
-            //button.showsBorderOnlyWhileMouseInside = false
+            // button.showsBorderOnlyWhileMouseInside = false
             button.toolTip = NSLocalizedString("Exit Recursive Mode", comment: "退出递归浏览模式")
             toolbarItem.view = button
             toolbarItem.label = NSLocalizedString("Exit Recursive Mode", comment: "退出递归浏览模式")
@@ -777,7 +842,9 @@ extension WindowController: NSToolbarDelegate {
     
     class NonClickableTextField: NSTextField {
         override func hitTest(_ point: NSPoint) -> NSView? {
-            return nil  // 忽略所有鼠标事件
+            // 忽略所有鼠标事件
+            // Ignore all mouse events
+            return nil
         }
     }
     
@@ -812,13 +879,13 @@ extension WindowController: NSToolbarDelegate {
     
     @objc func goBackAction(_ sender: Any?) {
         if let viewController = contentViewController as? ViewController {
-            viewController.historyBack()
+            viewController.handleHistoryBack()
         }
     }
 
     @objc func goForwardAction(_ sender: Any?) {
         if let viewController = contentViewController as? ViewController {
-            viewController.historyForward()
+            viewController.handleHistoryForward()
         }
     }
 
@@ -873,12 +940,15 @@ extension WindowController: NSToolbarDelegate {
         switch sender.selectedSegment {
         case 0:
             // 切换到自适应视图的代码
+            // Switch to justified view
             viewController.switchToJustifiedView()
         case 1:
             // 切换到瀑布流视图的代码
+            // Switch to waterfall view
             viewController.switchToWaterfallView()
         case 2:
             // 切换到网格视图的代码
+            // Switch to grid view
             viewController.switchToGridView()
         default:
             break
@@ -888,6 +958,7 @@ extension WindowController: NSToolbarDelegate {
     @objc func showSortMenu(_ sender: Any?) {
         guard let viewController = contentViewController as? ViewController else {return}
         // 图标映射
+        // Icon mapping
         let sortTypeIcons: [SortType: NSImage?] = [
             .pathA: NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: ""),
             .pathZ: NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: ""),
@@ -957,6 +1028,7 @@ extension WindowController: NSToolbarDelegate {
         }
         
         // 添加 EXIF 排序子菜单
+        // Add EXIF sorting submenu
         let exifSubmenu = NSMenu()
         let exifMenuItem = NSMenuItem(title: NSLocalizedString("Sort by EXIF Info", comment: "根据Exif信息排序"), action: nil, keyEquivalent: "")
         exifMenuItem.image = NSImage(systemSymbolName: "camera", accessibilityDescription: "")
@@ -1034,9 +1106,11 @@ extension WindowController: NSToolbarDelegate {
                 folderMenuItem.target = self
                 
                 // 创建子菜单
+                // Create submenu
                 let subMenu = NSMenu(title: folderPath)
                 
                 // 创建删除项
+                // Create delete item
                 let deleteMenuItem = NSMenuItem(
                     title: NSLocalizedString("Delete", comment: "删除"),
                     action: #selector(deleteFavorite(_:)),
@@ -1046,6 +1120,7 @@ extension WindowController: NSToolbarDelegate {
                 deleteMenuItem.representedObject = folderPath
                 
                 // 创建上移项
+                // Create move up item
                 let moveUpMenuItem = NSMenuItem(
                     title: NSLocalizedString("Move Up", comment: "上移"),
                     action: #selector(moveUpFavorite(_:)),
@@ -1055,6 +1130,7 @@ extension WindowController: NSToolbarDelegate {
                 moveUpMenuItem.representedObject = index
                 
                 // 创建下移项
+                // Create move down item
                 let moveDownMenuItem = NSMenuItem(
                     title: NSLocalizedString("Move Down", comment: "下移"),
                     action: #selector(moveDownFavorite(_:)),
@@ -1064,14 +1140,17 @@ extension WindowController: NSToolbarDelegate {
                 moveDownMenuItem.representedObject = index
                 
                 // 将项添加到子菜单
+                // Add items to submenu
                 subMenu.addItem(deleteMenuItem)
                 subMenu.addItem(moveUpMenuItem)
                 subMenu.addItem(moveDownMenuItem)
                 
                 // 将子菜单添加到主菜单项
+                // Add submenu to main menu item
                 folderMenuItem.submenu = subMenu
                 
                 // 将主菜单项添加到 favoritesMenu
+                // Add main menu item to favoritesMenu
                 favoritesMenu.addItem(folderMenuItem)
             }
         } else {
@@ -1221,7 +1300,9 @@ extension WindowController: NSToolbarDelegate {
         let actionItemSettings = menu.addItem(withTitle: NSLocalizedString("Settings...", comment: "设置..."), action: #selector(settingsAction), keyEquivalent: ",")
         actionItemSettings.keyEquivalentModifierMask = [.command]
 
-        if !viewController.publicVar.isInLargeView { // 文件夹视图
+        // 文件夹视图
+        // Folder view
+        if !viewController.publicVar.isInLargeView {
             
             menu.addItem(NSMenuItem.separator())
             
@@ -1254,10 +1335,14 @@ extension WindowController: NSToolbarDelegate {
             }
             
             menu.addItem(NSMenuItem.separator())
-            let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "v")
-            autoPlayVisibleVideo.keyEquivalentModifierMask = [.command, .shift]
-            autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
-            autoPlayVisibleVideo.isEnabled = !viewController.publicVar.isInLargeView
+//            let autoPlayVisibleVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Visible Video", comment: "自动播放可见视频"), action: #selector(toggleAutoPlayVisibleVideo), keyEquivalent: "v")
+//            autoPlayVisibleVideo.keyEquivalentModifierMask = [.command, .shift]
+//            autoPlayVisibleVideo.state = viewController.publicVar.autoPlayVisibleVideo ? .on : .off
+//            autoPlayVisibleVideo.isEnabled = !viewController.publicVar.isInLargeView
+
+            let autoPlaySelectedVideo = menu.addItem(withTitle: NSLocalizedString("Auto Play Selected Video", comment: "自动播放选中视频"), action: #selector(toggleAutoPlaySelectedVideo), keyEquivalent: "")
+            autoPlaySelectedVideo.state = viewController.publicVar.autoPlaySelectedVideo ? .on : .off
+            autoPlaySelectedVideo.isEnabled = !viewController.publicVar.isInLargeView
 
             let useInternalPlayer = menu.addItem(withTitle: NSLocalizedString("Use Internal Video Player", comment: "使用内置视频播放器"), action: #selector(toggleUseInternalPlayer), keyEquivalent: "")
             useInternalPlayer.state = globalVar.useInternalPlayer ? .on : .off
@@ -1276,7 +1361,9 @@ extension WindowController: NSToolbarDelegate {
             
             let recursiveModeInfo = menu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(recursiveModeInfo), keyEquivalent: "")
             
-        } else { // 大图视图
+        // 大图视图
+        // Large image view
+        } else {
             
             menu.addItem(NSMenuItem.separator())
             
@@ -1287,6 +1374,10 @@ extension WindowController: NSToolbarDelegate {
             let lockZoom = menu.addItem(withTitle: NSLocalizedString("Lock Zoom", comment: "锁定缩放"), action: #selector(toggleLockZoom), keyEquivalent: "")
             lockZoom.keyEquivalentModifierMask = []
             lockZoom.state = viewController.publicVar.isZoomLocked ? .on : .off
+
+            let lockMirror = menu.addItem(withTitle: NSLocalizedString("Lock Mirror", comment: "锁定镜像"), action: #selector(toggleLockMirror), keyEquivalent: "")
+            lockMirror.keyEquivalentModifierMask = []
+            lockMirror.state = viewController.publicVar.isMirrorLocked ? .on : .off
             
             menu.addItem(NSMenuItem.separator())
             
@@ -1403,7 +1494,7 @@ extension WindowController: NSToolbarDelegate {
             if #available(macOS 14.0, *) {
                 viewController.largeImageView.imageView.preferredImageDynamicRange = (viewController.publicVar.isEnableHDR) ? .high : .standard
             }
-            //self.updateToolbar()
+            // self.updateToolbar()
             viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, forceRefresh: true)
         }
     }
@@ -1416,6 +1507,11 @@ extension WindowController: NSToolbarDelegate {
     @objc func toggleLockZoom(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
         viewController.toggleLockZoom()
+    }
+
+    @objc func toggleLockMirror(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleLockMirror()
     }
 
     @objc func showCustomZoomRatioDialog(_ sender: NSMenuItem){
@@ -1473,12 +1569,12 @@ extension WindowController: NSToolbarDelegate {
     
     @objc func switchToActualSize(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
-        viewController.switchToActualSize()
+        viewController.switchToActualSizeForLargeImage()
     }
     
     @objc func switchToFitToWindow(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
-        viewController.switchToFitToWindow()
+        viewController.switchToFitToWindowForLargeImage()
     }
     
     @objc func switchToSystemTheme(_ sender: NSMenuItem){
@@ -1525,6 +1621,7 @@ extension WindowController: NSToolbarDelegate {
         guard let folderPath = sender.representedObject as? String else { return }
         
         // 在这里处理删除逻辑
+        // Handle delete logic here
         if let index = globalVar.myFavoritesArray.firstIndex(of: folderPath) {
             globalVar.myFavoritesArray.remove(at: index)
             let defaults = UserDefaults.standard
@@ -1532,30 +1629,34 @@ extension WindowController: NSToolbarDelegate {
         }
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // Update menu to reflect changes
+        // menuNeedsUpdate(favoritesMenu)
     }
     @objc func moveUpFavorite(_ sender: NSMenuItem) {
         guard let index = sender.representedObject as? Int, index > 0 else { return }
         
         // 在这里处理上移逻辑
+        // Handle move up logic here
         globalVar.myFavoritesArray.swapAt(index, index - 1)
         let defaults = UserDefaults.standard
         defaults.set(globalVar.myFavoritesArray, forKey: "globalVar.myFavoritesArray")
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // Update menu to reflect changes
+        // menuNeedsUpdate(favoritesMenu)
     }
 
     @objc func moveDownFavorite(_ sender: NSMenuItem) {
         guard let index = sender.representedObject as? Int, index < globalVar.myFavoritesArray.count - 1 else { return }
         
         // 在这里处理下移逻辑
+        // Handle move down logic here
         globalVar.myFavoritesArray.swapAt(index, index + 1)
         let defaults = UserDefaults.standard
         defaults.set(globalVar.myFavoritesArray, forKey: "globalVar.myFavoritesArray")
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // menuNeedsUpdate(favoritesMenu)
     }
     
     @objc func settingsAction(_ sender: NSMenuItem) {
@@ -1630,6 +1731,11 @@ extension WindowController: NSToolbarDelegate {
     @objc func toggleAutoPlayVisibleVideo(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
         viewController.toggleAutoPlayVisibleVideo()
+    }
+
+    @objc func toggleAutoPlaySelectedVideo(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.toggleAutoPlaySelectedVideo()
     }
 
     @objc func toggleUseInternalPlayer(_ sender: NSMenuItem){

@@ -2,8 +2,6 @@
 //  AppDelegate.swift
 //  FlowVision
 //
-//  Created by netdcy on 2024/3/13.
-//
 
 import Cocoa
 import Settings
@@ -40,6 +38,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var reopenClosedTabsMenuItem: NSMenuItem!
     @IBOutlet weak var lockRotationMenuItem: NSMenuItem!
     @IBOutlet weak var lockZoomMenuItem: NSMenuItem!
+    @IBOutlet weak var lockMirrorMenuItem: NSMenuItem!
     @IBOutlet weak var activatePanScrollMenuItem: NSMenuItem!
     @IBOutlet weak var activatePanScrollReadmeMenuItem: NSMenuItem!
     @IBOutlet weak var toggleRawUseEmbeddedThumbMenuItem: NSMenuItem!
@@ -62,7 +61,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     
     func applicationWillFinishLaunching(_ aNotification: Notification) {
 
-        log("开始applicationWillFinishLaunching")
+        log("Start applicationWillFinishLaunching")
+        // Start applicationWillFinishLaunching
         
         func generateRoundedArray() -> [Int] {
             var result: [Int] = []
@@ -82,11 +82,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             return result
         }
         THUMB_SIZES=generateRoundedArray()
-        //print(THUMB_SIZES)
+        // print(THUMB_SIZES)
         
-        //UserDefaults.standard.set(nil, forKey: "AppleLanguages")
-        //UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
-        //UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
+        // UserDefaults.standard.set(nil, forKey: "AppleLanguages")
+        // UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+        // UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
         
         let defaults = UserDefaults.standard
         let appearance = defaults.string(forKey: "appearance")
@@ -121,8 +121,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if let autoHideToolbar = UserDefaults.standard.value(forKey: "autoHideToolbar") as? Bool {
             globalVar.autoHideToolbar = autoHideToolbar
         }
+        if let autoHideCursorWhenFullscreen = UserDefaults.standard.value(forKey: "autoHideCursorWhenFullscreen") as? Bool {
+            globalVar.autoHideCursorWhenFullscreen = autoHideCursorWhenFullscreen
+        }
         if let randomFolderThumb = UserDefaults.standard.value(forKey: "randomFolderThumb") as? Bool {
             globalVar.randomFolderThumb = randomFolderThumb
+        }
+        if let thumbnailOfFolderUseStacking = UserDefaults.standard.value(forKey: "thumbnailOfFolderUseStacking") as? Bool {
+            globalVar.thumbnailOfFolderUseStacking = thumbnailOfFolderUseStacking
         }
         if let loopBrowsing = UserDefaults.standard.value(forKey: "loopBrowsing") as? Bool {
             globalVar.loopBrowsing = loopBrowsing
@@ -172,6 +178,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if let videoPlayRememberPosition = UserDefaults.standard.value(forKey: "videoPlayRememberPosition") as? Bool {
             globalVar.videoPlayRememberPosition = videoPlayRememberPosition
         }
+        if let videoPlaySequentialPlay = UserDefaults.standard.value(forKey: "videoPlaySequentialPlay") as? Bool {
+            globalVar.videoPlaySequentialPlay = videoPlaySequentialPlay
+        }
         if let useInternalPlayer = UserDefaults.standard.value(forKey: "useInternalPlayer") as? Bool {
             globalVar.useInternalPlayer = useInternalPlayer
         }
@@ -184,10 +193,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if let scrollMouseWheelToZoom = UserDefaults.standard.value(forKey: "scrollMouseWheelToZoom") as? Bool {
             globalVar.scrollMouseWheelToZoom = scrollMouseWheelToZoom
         }
-        
+        if let scrollSensitivity = UserDefaults.standard.value(forKey: "scrollSensitivity") as? Double {
+            globalVar.scrollSensitivity = scrollSensitivity
+        }
+        if let keepFilterStateWhenSwitchFolder = UserDefaults.standard.value(forKey: "keepFilterStateWhenSwitchFolder") as? Bool {
+            globalVar.keepFilterStateWhenSwitchFolder = keepFilterStateWhenSwitchFolder
+        }
         globalVar.myFavoritesArray = defaults.array(forKey: "globalVar.myFavoritesArray") as? [String] ?? [String]()
         
-        //requestAppleEventsPermission()
+        // requestAppleEventsPermission()
         
         favoritesMenu.removeAllItems()
         favoritesMenu.delegate = self
@@ -196,14 +210,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         viewMenu.delegate = self
 
         // 初始化标签系统
+        // Initialize tagging system
         TaggingSystem.initialize()
 
-        log("结束applicationWillFinishLaunching")
+        log("End applicationWillFinishLaunching")
+        // End applicationWillFinishLaunching
     }
 
     func applicationDidFinishLaunching(_ aNotification: Notification) {
 
-        log("开始applicationDidFinishLaunching")
+        log("Start applicationDidFinishLaunching")
+        // Start applicationDidFinishLaunching
         
         if windowControllers.count == 0 {
             _ = createNewWindow()
@@ -214,13 +231,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
 //            FFmpegKitWrapper.shared.loadFFmpegKitIfNeeded()
 //        }
         
-        log("结束applicationDidFinishLaunching")
+        log("End applicationDidFinishLaunching")
+        // End applicationDidFinishLaunching
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
         log("App EXIT")
         log("-----------------------------------------------------------")
-        //Logger.shared.clearLogFile()
+        // Logger.shared.clearLogFile()
         UserDefaults.standard.set(true, forKey: "hasNormalExit")
         UserDefaults.standard.synchronize()
     }
@@ -233,8 +251,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
 //        return true
 //    }
     
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag {
+            // 当没有可见窗口时（例如关闭了所有窗口后点击Dock图标），创建新窗口
+            // When no visible windows (e.g. clicking Dock icon after closing all windows), create a new window
+            _ = createNewWindow()
+        }
+        return true
+    }
+    
     func createNewWindow(_ path: String? = nil) -> WindowController? {
-        log("开始createNewWindow")
+        log("Start createNewWindow")
+        // Start createNewWindow
         if isWindowNumMax() {
             showAlert(message: NSLocalizedString("window-num-max", comment: "窗口数量超过限制"))
             return nil
@@ -249,39 +277,48 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             FileManager.default.fileExists(atPath: path, isDirectory: &isDirectoryObj)
             let isDirectory=isDirectoryObj.boolValue
 
-            if isDirectory || path.hasSuffix("/") { //如果打开目录
+            // 如果打开目录
+            // If opening directory
+            if isDirectory || path.hasSuffix("/") {
                 var tmp = url.absoluteString
                 if !tmp.hasSuffix("/"){
                     tmp += "/"
                 }
                 openFolder=getFileStyleFolderPath(tmp+"xxx")
-            }else{ //如果打开文件
+            }else{
+                // 如果打开文件
+                // If opening file
                 openFolder=getFileStyleFolderPath(path)
                 if globalVar.portableMode,
-                   let originalSize=getImageInfo(url: URL(string: getFileStylePath(path))!)?.size{
+                   let originalSize=getImageInfo(url: URL(string: getFileStylePath(path))!, needMetadata: false)?.size{
                     globalVar.startSpeedUpImageSizeCache=originalSize
                 }
             }
         }
         
         // 加载 Main.storyboard
+        // Load Main.storyboard
         let storyboard = NSStoryboard(name: "Main", bundle: nil)
         
         // 实例化 WindowController
+        // Instantiate WindowController
         guard let windowController = storyboard.instantiateController(withIdentifier: "WindowController") as? WindowController else {
             fatalError("Cannot find WindowController in Main.storyboard")
         }
         
         // 添加到 windowControllers 数组
+        // Add to windowControllers array
         windowControllers.append(windowController)
         globalVar.windowNum += 1
         
         // 显示窗口
+        // Show window
         if !globalVar.isLaunchFromFile || !globalVar.useCreateWindowShowDelay {
             windowController.showWindow(self)
         }
         
         // 获取 contentViewController 并调用其函数
+        // Get contentViewController and call its function
         if let viewController = windowController.contentViewController as? ViewController {
             if let openFolder=openFolder{
                 viewController.fileDB.lock()
@@ -328,7 +365,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         
         if isDirectory && file.last != "/" {file=file+"/"}
         
-        //新窗口打开（暂时统一新窗口打开）
+        // 新窗口打开（暂时统一新窗口打开）
+        // Open in new window (temporarily unified to open in new window)
         if true || windowControllers.count == 0 {
             if isDirectory{
                 _ = createNewWindow(file)
@@ -336,8 +374,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             }else{
                 globalVar.isLaunchFromFile=true
                 if windowControllers.count == 0 || globalVar.autoHideToolbar {
-                    //直到大图加载完毕后才显示窗口，用来减少首次启动的画面闪动
-                    //对于多标签页情况的第二个标签页，使用此会导致大图的缩放是按上次记忆而不是当前窗口实际大小，因此除这两种情况外不适合使用
+                    // 直到大图加载完毕后才显示窗口，用来减少首次启动的画面闪动
+                    // Don't show window until large image is loaded, to reduce startup screen flicker
+                    // 对于多标签页情况的第二个标签页，使用此会导致大图的缩放是按上次记忆而不是当前窗口实际大小，因此除这两种情况外不适合使用
+                    // For second tab in multi-tab case, using this will cause large image scaling to be based on last memory rather than current window actual size, so it's not suitable except for these two cases
                     globalVar.useCreateWindowShowDelay=true
                 }
                 if let targetWindowController = createNewWindow(file) {
@@ -347,7 +387,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             }
         }
         
-        //本窗口打开
+        // 本窗口打开
+        // Open in current window
         if isDirectory{
             DispatchQueue.main.async {
                 if let mainViewController = NSApplication.shared.mainWindow?.windowController?.contentViewController as? ViewController {
@@ -410,10 +451,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 
                 log("Selected file: \(result.path)")
                 
-                //本窗口打开
-                //getMainViewController()?.handleDraggedFiles([result])
+                // 本窗口打开
+                // Open in current window
+                // getMainViewController()?.handleDraggedFiles([result])
                 
-                //新窗口打开
+                // 新窗口打开
+                // Open in new window
                 var isDirectoryObj: ObjCBool = false
                 FileManager.default.fileExists(atPath: result.path, isDirectory: &isDirectoryObj)
                 let isDirectory=isDirectoryObj.boolValue
@@ -458,9 +501,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                     folderMenuItem.target = self
                     
                     // 创建子菜单
+                    // Create submenu
                     let subMenu = NSMenu(title: folderPath)
                     
                     // 创建删除项
+                    // Create delete item
                     let deleteMenuItem = NSMenuItem(
                         title: NSLocalizedString("Delete", comment: "删除"),
                         action: #selector(deleteFavorite(_:)),
@@ -470,6 +515,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                     deleteMenuItem.representedObject = folderPath
                     
                     // 创建上移项
+                    // Create move up item
                     let moveUpMenuItem = NSMenuItem(
                         title: NSLocalizedString("Move Up", comment: "上移"),
                         action: #selector(moveUpFavorite(_:)),
@@ -479,6 +525,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                     moveUpMenuItem.representedObject = index
                     
                     // 创建下移项
+                    // Create move down item
                     let moveDownMenuItem = NSMenuItem(
                         title: NSLocalizedString("Move Down", comment: "下移"),
                         action: #selector(moveDownFavorite(_:)),
@@ -488,14 +535,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                     moveDownMenuItem.representedObject = index
                     
                     // 将项添加到子菜单
+                    // Add items to submenu
                     subMenu.addItem(deleteMenuItem)
                     subMenu.addItem(moveUpMenuItem)
                     subMenu.addItem(moveDownMenuItem)
                     
                     // 将子菜单添加到主菜单项
+                    // Add submenu to main menu item
                     folderMenuItem.submenu = subMenu
                     
                     // 将主菜单项添加到 favoritesMenu
+                    // Add main menu item to favoritesMenu
                     favoritesMenu.addItem(folderMenuItem)
                 }
             } else {
@@ -511,7 +561,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if menu == historyMenu {
             historyMenu.removeAllItems()
 
-            //返回、前进
+            // 返回、前进
+            // Back, forward
             let backMenuItem = NSMenuItem(title: NSLocalizedString("Go Back", comment: "后退"), action: #selector(historyBack(_:)), keyEquivalent: "[")
             backMenuItem.keyEquivalentModifierMask=[.command]
             backMenuItem.target = self
@@ -575,7 +626,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             justifiedViewMenuItem.isHidden = mainViewController.publicVar.isInLargeView
             waterfallViewModeMenuItem.isHidden = mainViewController.publicVar.isInLargeView
             gridViewMenuItem.isHidden = mainViewController.publicVar.isInLargeView
-            detailViewModeMenuItem.isHidden = mainViewController.publicVar.isInLargeView
+            //detailViewModeMenuItem.isHidden = mainViewController.publicVar.isInLargeView
             
             maximizeWindowMenuItem.keyEquivalent="1"
             maximizeWindowMenuItem.keyEquivalentModifierMask=[]
@@ -609,11 +660,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
 
             lockRotationMenuItem.state = mainViewController.publicVar.isRotationLocked ? .on : .off
             lockZoomMenuItem.state = mainViewController.publicVar.isZoomLocked ? .on : .off
+            lockMirrorMenuItem.state = mainViewController.publicVar.isMirrorLocked ? .on : .off
             activatePanScrollMenuItem.state = mainViewController.publicVar.isPanWhenZoomed ? .on : .off
             toggleRawUseEmbeddedThumbMenuItem.state = mainViewController.publicVar.isRawUseEmbeddedThumb ? .on : .off
 
             lockRotationMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             lockZoomMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
+            lockMirrorMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             activatePanScrollMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             activatePanScrollReadmeMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             toggleRawUseEmbeddedThumbMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
@@ -622,19 +675,30 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        // 如果焦点在标准文本控件上，启用复制/剪切菜单
+        // If focus is on standard text controls, enable copy/cut menu
+        if menuItem.action == #selector(editCopy(_:)) || menuItem.action == #selector(editCut(_:)) {
+            if let firstResponder = NSApp.keyWindow?.firstResponder,
+               firstResponder is NSTextView || firstResponder is NSTextField {
+                return true
+            }
+        }
         guard let mainViewController=getMainViewController() else{
-            //如果没有窗口，则只有新建标签页为有效，其它皆为无效
+            // 如果没有窗口，则只有新建标签页为有效，其它皆为无效
+            // If no window, only new tab is valid, all others are invalid
             if menuItem.action == #selector(fileNewTab(_:)) {
                 return true
             }else{
                 return false
             }
         }
-        //新建标签页限制最大窗口数量
+        // 新建标签页限制最大窗口数量
+        // New tab limited by maximum window count
         if menuItem.action == #selector(fileNewTab(_:)) && isWindowNumMax() {
             return false
         }
-        //重新打开关闭的标签页
+        // 重新打开关闭的标签页
+        // Reopen closed tabs
         if menuItem.action == #selector(reopenClosedTabs(_:)) {
             if globalVar.closedPaths.isEmpty {
                 return false
@@ -642,7 +706,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return true
             }
         }
-        //返回、前进
+        // 返回、前进
+        // Back, forward
         if menuItem.action == #selector(historyBack(_:)) {
             if (mainViewController.publicVar.folderStepStack.count > 0) && (!mainViewController.publicVar.isInLargeView) {
                 return true
@@ -657,34 +722,39 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return false
             }
         }
-        //根据图片大小调整窗口
+        // 根据图片大小调整窗口
+        // Adjust window based on image size
         if menuItem.action == #selector(adjustWindowActual(_:)) || menuItem.action == #selector(adjustWindowCurrent(_:)) {
             if !mainViewController.publicVar.isInLargeView {
                 return false
             }
         }
-        //复制、删除
-        if menuItem.action == #selector(editCopy(_:)) || menuItem.action == #selector(editDelete(_:)) {
+        // 复制、剪切、删除
+        // Copy, cut, delete
+        if menuItem.action == #selector(editCopy(_:)) || menuItem.action == #selector(editCut(_:)) || menuItem.action == #selector(editDelete(_:)) {
             if mainViewController.publicVar.isKeyEventEnabled == false {
                 return false
             }
 //            if !mainViewController.publicVar.isOutlineViewFirstResponder && !mainViewController.publicVar.isCollectionViewFirstResponder {
 //                return false
 //            }
-            //如果焦点在OutlineView
+            // 如果焦点在OutlineView
+            // If focus is on OutlineView
             if mainViewController.publicVar.isOutlineViewFirstResponder{
                 if mainViewController.outlineView.getFirstSelectedUrl() == nil {
                     return false
                 }
             }
-            //如果焦点在CollectionView
+            // 如果焦点在CollectionView
+            // If focus is on CollectionView
             if mainViewController.publicVar.isCollectionViewFirstResponder{
                 if mainViewController.publicVar.selectedUrls().count == 0 {
                     return false
                 }
             }
         }
-        //粘贴、移动
+        // 粘贴、移动
+        // Paste, move
         if menuItem.action == #selector(editPaste(_:)) || menuItem.action == #selector(editMove(_:)) {
             if mainViewController.publicVar.isKeyEventEnabled == false {
                 return false
@@ -701,18 +771,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return false
             }
         }
-        //选择全部、搜索
+        // 选择全部、搜索
+        // Select all, search
         if menuItem.action == #selector(selectAll(_:)) || menuItem.action == #selector(showSearch(_:)) {
             if mainViewController.publicVar.isInLargeView {
                 return false
             }
         }
-        //取消选择
+        // 取消选择
+        // Deselect
         if menuItem.action == #selector(deselectAll(_:)) {
             if mainViewController.publicVar.isInLargeView {
                 return false
             }
-            //如果焦点在CollectionView
+            // 如果焦点在CollectionView
+            // If focus is on CollectionView
             if mainViewController.publicVar.isCollectionViewFirstResponder{
                 if mainViewController.publicVar.selectedUrls().count == 0 {
                     return false
@@ -721,7 +794,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return false
             }
         }
-        //是否是显示全部文件类型
+        // 是否是显示全部文件类型
+        // Whether to show all file types
         if menuItem.action == #selector(toggleIsShowImageFile(_:)) || menuItem.action == #selector(toggleIsShowRawFile(_:)) || menuItem.action == #selector(toggleIsShowVideoFile(_:)) {
             if mainViewController.publicVar.isShowAllTypeFile {
                 return false
@@ -761,6 +835,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         guard let folderPath = sender.representedObject as? String else { return }
         
         // 在这里处理删除逻辑
+        // Handle delete logic here
         if let index = globalVar.myFavoritesArray.firstIndex(of: folderPath) {
             globalVar.myFavoritesArray.remove(at: index)
             let defaults = UserDefaults.standard
@@ -768,55 +843,109 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         }
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // Update menu to reflect changes
+        // menuNeedsUpdate(favoritesMenu)
     }
     @objc func moveUpFavorite(_ sender: NSMenuItem) {
         guard let index = sender.representedObject as? Int, index > 0 else { return }
         
         // 在这里处理上移逻辑
+        // Handle move up logic here
         globalVar.myFavoritesArray.swapAt(index, index - 1)
         let defaults = UserDefaults.standard
         defaults.set(globalVar.myFavoritesArray, forKey: "globalVar.myFavoritesArray")
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // Update menu to reflect changes
+        // menuNeedsUpdate(favoritesMenu)
     }
 
     @objc func moveDownFavorite(_ sender: NSMenuItem) {
         guard let index = sender.representedObject as? Int, index < globalVar.myFavoritesArray.count - 1 else { return }
         
         // 在这里处理下移逻辑
+        // Handle move down logic here
         globalVar.myFavoritesArray.swapAt(index, index + 1)
         let defaults = UserDefaults.standard
         defaults.set(globalVar.myFavoritesArray, forKey: "globalVar.myFavoritesArray")
         
         // 更新菜单以反映更改
-        //menuNeedsUpdate(favoritesMenu)
+        // Update menu to reflect changes
+        // menuNeedsUpdate(favoritesMenu)
     }
     
     @IBAction func editOperationLogs(_ sender: NSMenuItem){
-        getMainViewController()?.showOperationLogs()
+        getMainViewController()?.handleShowOperationLogs()
     }
     
     @IBAction func editMove(_ sender: NSMenuItem){
         getMainViewController()?.handleMove()
     }
     
-    @IBAction func editCopy(_ sender: NSMenuItem){
+    @IBAction func editCut(_ sender: NSMenuItem){
+        // 如果焦点在标准文本控件上，使用系统默认的剪切行为
+        // If focus is on standard text controls, use system default cut behavior
+        if let firstResponder = NSApp.keyWindow?.firstResponder {
+            if firstResponder is NSTextView || firstResponder is NSTextField {
+                firstResponder.tryToPerform(#selector(NSText.cut(_:)), with: nil)
+                return
+            }
+        }
+        
         guard let mainViewController=getMainViewController() else{return}
+        
+        // 复用复制逻辑，将文件URL复制到剪贴板
+        // Reuse copy logic, copy file URLs to pasteboard
         if mainViewController.publicVar.isInLargeView {
             mainViewController.largeImageView.actCopy()
         }else{
-            //如果焦点在OutlineView
+            // 如果焦点在OutlineView
+            // If focus is on OutlineView
             if mainViewController.publicVar.isOutlineViewFirstResponder{
                 mainViewController.outlineView.actCopy(isByKeyboard: true)
             }
-            //如果焦点在CollectionView
+            // 如果焦点在CollectionView
+            // If focus is on CollectionView
             if mainViewController.publicVar.isCollectionViewFirstResponder{
                 mainViewController.handleCopy()
             }
         }
         
+        // 设置剪切模式标志，下次粘贴时将执行移动操作
+        // Set cut mode flag, next paste will perform move operation
+        globalVar.isCutMode = true
+    }
+    
+    @IBAction func editCopy(_ sender: NSMenuItem){
+        // 如果焦点在标准文本控件上，使用系统默认的复制行为
+        // If focus is on standard text controls, use system default copy behavior
+        if let firstResponder = NSApp.keyWindow?.firstResponder {
+            if firstResponder is NSTextView || firstResponder is NSTextField {
+                firstResponder.tryToPerform(#selector(NSText.copy(_:)), with: nil)
+                return
+            }
+        }
+
+        guard let mainViewController=getMainViewController() else{return}
+
+        if mainViewController.publicVar.isInLargeView {
+            mainViewController.largeImageView.actCopy()
+        }else{
+            // 如果焦点在OutlineView
+            // If focus is on OutlineView
+            if mainViewController.publicVar.isOutlineViewFirstResponder{
+                mainViewController.outlineView.actCopy(isByKeyboard: true)
+            }
+            // 如果焦点在CollectionView
+            // If focus is on CollectionView
+            if mainViewController.publicVar.isCollectionViewFirstResponder{
+                mainViewController.handleCopy()
+            }
+        }
+        
+        // 复制操作重置剪切模式
+        // Copy operation resets cut mode
+        globalVar.isCutMode = false
     }
     
     @IBAction func editPaste(_ sender: NSMenuItem){
@@ -824,16 +953,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     @IBAction func editDelete(_ sender: NSMenuItem){
-        //注意：由于未知原因有时无法触发，因此主要在按键监听里处理
+        // 注意：由于未知原因有时无法触发，因此主要在按键监听里处理
+        // Note: Sometimes cannot trigger for unknown reasons, so mainly handled in key listener
         guard let mainViewController=getMainViewController() else{return}
         if mainViewController.publicVar.isInLargeView {
             mainViewController.handleDelete()
         }else{
-            //如果焦点在OutlineView
+            // 如果焦点在OutlineView
+            // If focus is on OutlineView
             if mainViewController.publicVar.isOutlineViewFirstResponder{
                 mainViewController.outlineView.actDelete(isByKeyboard: true)
             }
-            //如果焦点在CollectionView
+            // 如果焦点在CollectionView
+            // If focus is on CollectionView
             if mainViewController.publicVar.isCollectionViewFirstResponder{
                 mainViewController.handleDelete()
             }
@@ -841,11 +973,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
 
     @IBAction func historyBack(_ sender: NSMenuItem){
-        getMainViewController()?.historyBack()
+        getMainViewController()?.handleHistoryBack()
     }
     
     @IBAction func historyForward(_ sender: NSMenuItem){
-        getMainViewController()?.historyForward()
+        getMainViewController()?.handleHistoryForward()
     }
     
     @IBAction func fileNewTab(_ sender: NSMenuItem){
@@ -856,7 +988,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
 
     @IBAction func reopenClosedTabs(_ sender: NSMenuItem){
-        getMainViewController()?.reopenClosedTabs()
+        getMainViewController()?.handleReopenClosedTabs()
     }
     
     @IBAction func fileNewFolder(_ sender: NSMenuItem){
@@ -884,6 +1016,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     
     @IBAction func toggleLockZoom(_ sender: NSMenuItem){
         getMainViewController()?.toggleLockZoom()
+    }
+
+    @IBAction func toggleLockMirror(_ sender: NSMenuItem){
+        getMainViewController()?.toggleLockMirror()
     }
 
     @IBAction func toggleActivatePanScroll(_ sender: NSMenuItem){
@@ -977,11 +1113,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     @IBAction func switchToActualSize(_ sender: NSMenuItem){
-        getMainViewController()?.switchToActualSize()
+        getMainViewController()?.switchToActualSizeForLargeImage()
         
     }
     @IBAction func switchToFitToWindow(_ sender: NSMenuItem){
-        getMainViewController()?.switchToFitToWindow()
+        getMainViewController()?.switchToFitToWindowForLargeImage()
     }
     
     @IBAction func toggleSidebar(_ sender: NSMenuItem){
@@ -1007,12 +1143,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     @IBAction func selectAll(_ sender: NSMenuItem){
-        //getMainViewController()?.collectionView.selectAll(nil)
+        // getMainViewController()?.collectionView.selectAll(nil)
         NSApp.keyWindow?.firstResponder?.selectAll(nil)
     }
     
     @IBAction func deselectAll(_ sender: NSMenuItem){
-        //主要由按键监听处理
+        // 主要由按键监听处理
+        // Mainly handled by key listener
         getMainViewController()?.collectionView.deselectAll(nil)
     }
     
