@@ -351,7 +351,10 @@ extension ViewController {
             } else if event.keyCode == 126 /* Arrow up */ {
                 doAutocomplete(reverse: true)
             } else {
-                initSuggestions = true
+                // left and right cursor movement
+                if event.keyCode != 123 && event.keyCode != 124 {
+                    initSuggestions = true
+                }
                 super.keyUp(with: event)
             }
         }
