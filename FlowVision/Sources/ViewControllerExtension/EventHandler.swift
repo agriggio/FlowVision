@@ -386,6 +386,7 @@ extension ViewController {
         var suggestions: [String] = []
         var currentSuggestionIndex: Int = -1
         var initSuggestions: Bool = true
+        var basePath: String = "/"
         
         override func keyUp(with event: NSEvent) {
             if event.keyCode == 48 /* Tab */
@@ -405,10 +406,16 @@ extension ViewController {
         private func doAutocomplete(reverse: Bool) {
             if initSuggestions {
                 suggestions = []
-                if let sidx = self.stringValue.lastIndex(of: "/") {
-                    let idx = self.stringValue.distance(from: self.stringValue.startIndex, to: sidx)
-                    let pth = String(self.stringValue.prefix(idx+1))
-                    let q = String(self.stringValue.suffix(self.stringValue.count-(idx+1)))
+                var curPath: String = self.stringValue
+                if !curPath.hasPrefix("/") {
+                    if let resolvedPath = resolveRelativePath(basePath: self.basePath, relativePath: curPath) {
+                        curPath = resolvedPath
+                    }
+                }
+                if let sidx = curPath.lastIndex(of: "/") {
+                    let idx = curPath.distance(from: curPath.startIndex, to: sidx)
+                    let pth = String(curPath.prefix(idx+1))
+                    let q = String(curPath.suffix(curPath.count-(idx+1)))
                     suggestions = autocompleteFileSystem(path: pth, query: q)
                 }
                 initSuggestions = false
@@ -479,6 +486,7 @@ extension ViewController {
         let inputTextField = AutocompleteTextField(frame: NSRect(x: 0, y: 0, width: 400, height: 24))
         inputTextField.placeholderString = ""
         inputTextField.stringValue = fileDB.curFolder.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!
+        inputTextField.basePath = inputTextField.stringValue
         if let textFieldCell = inputTextField.cell as? NSTextFieldCell {
             textFieldCell.usesSingleLineMode = true
             textFieldCell.wraps = false
