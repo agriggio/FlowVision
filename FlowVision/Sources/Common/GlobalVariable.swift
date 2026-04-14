@@ -17,14 +17,12 @@ let RESET_VIEW_FILE_NUM_THRESHOLD = 5000
 let INFO_VIEW_DURATION = 0.3
 
 let OFFICIAL_WEBSITE = "https://flowvision.app"
+let FINDER_TAG_LEARN_MORE_URL = "https://flowvision.app/tag"
 
 let ROOT_NAME = getSystemVolumeName() ?? "Macintosh HD"
 
 let COLOR_COLLECTIONVIEW_BG_LIGHT = "#FFFFFF"
 let COLOR_COLLECTIONVIEW_BG_DARK = "#2D2D2D"
-
-let TAGGING_FEATURE_ENABLED = false
-let EDIT_FEATURE_ENABLED = false
 
 class GlobalVar{
     var myFavoritesArray = ["/"]
@@ -43,6 +41,10 @@ class GlobalVar{
     // 剪切模式标志，剪切时置为true，粘贴时检查此标志决定执行移动还是复制
     // Cut mode flag, set to true on cut, checked on paste to decide move or copy
     var isCutMode = false
+    
+    // 被剪切的文件路径集合，用于在UI上显示变淡效果
+    // Set of cut file paths, used to show dimmed effect in UI
+    var cutItemPaths = Set<String>()
     
     // 实时状态变量
     // Real-time state variables
@@ -99,6 +101,9 @@ class GlobalVar{
     var openLastFolder = true
     var homeFolder = "file:///"
     var keepFilterStateWhenSwitchFolder = false
+    var dirTreeAutoExpand = true
+    var largeImageViewShowTagsAndRating = true
+    var enhancedIndexEnabled = true
     
     // 可记忆设置变量
     // Rememberable settings variables
@@ -111,6 +116,7 @@ class GlobalVar{
     var portableListHeightRatio = 0.84
     var portableListWidthRatioHH = 0.82
     var portableListHeightRatioHH = 0.84
+    var videoVolume: Float = 1.0
     
     var HandledImageExtensions: [String] = []
     var HandledRawExtensions: [String] = []
@@ -161,6 +167,15 @@ func isWindowNumMax() -> Bool{
 func getMainViewController() -> ViewController? {
     if let viewController = NSApplication.shared.mainWindow?.contentViewController as? ViewController {
         return viewController
+    }
+    return nil
+}
+
+func getAnyViewController() -> ViewController? {
+    for window in NSApplication.shared.windows {
+        if let viewController = window.contentViewController as? ViewController {
+            return viewController
+        }
     }
     return nil
 }

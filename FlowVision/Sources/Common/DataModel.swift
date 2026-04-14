@@ -423,10 +423,11 @@ class ImageInfo {
 }
 
 class FileModel {
-    init(path: String, ver: Int, isDir: Bool = false, fileSize: Int? = nil, createDate: Date? = nil, modDate: Date? = nil, addDate: Date? = nil, doNotActualRead:Bool = false){
+    init(path: String, ver: Int, isDir: Bool = false, isAlias: Bool = false, fileSize: Int? = nil, createDate: Date? = nil, modDate: Date? = nil, addDate: Date? = nil, doNotActualRead:Bool = false){
         self.path=path
         self.ver=ver
         self.isDir=isDir
+        self.isAlias=isAlias
         self.fileSize=fileSize
         self.createDate=createDate
         self.modDate=modDate
@@ -439,6 +440,7 @@ class FileModel {
     var path: String
     var ext: String = ""
     var type: FileType = .notSet
+    var isAlias: Bool = false
     
     var originalSize: NSSize?
     var largeSize: NSSize?
@@ -572,6 +574,14 @@ class TreeViewModel {
     }
     
     func hasSubdirectory(at folderURL: URL) -> Bool {
+        if folderURL.path.hasPrefix("/VirtualFinderTagsFolder") {
+            if folderURL.path == "/VirtualFinderTagsFolder" {
+                return true
+            }else{
+                return false
+            }
+        }
+        
         let fileManager = FileManager.default
         var options: FileManager.DirectoryEnumerationOptions
         if viewController.publicVar.isShowHiddenFile {
@@ -598,7 +608,14 @@ class TreeViewModel {
             
             // 检查是否是根目录
             // Check if it's the root directory
-            if folderURL.path != "root" {
+            if folderURL.path == "/VirtualFinderTagsFolder" {
+                for tag in FinderTag.all {
+                    if let encodedName = tag.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                       let tagURL = URL(string: "file:///VirtualFinderTagsFolder/\(encodedName)/") {
+                        contents.append(tagURL)
+                    }
+                }
+            } else if folderURL.path != "root" {
                 contents = try FileManager.default.contentsOfDirectory(at: folderURL, includingPropertiesForKeys: [.isDirectoryKey, .isUbiquitousItemKey, .isHiddenKey, .contentModificationDateKey, .creationDateKey, .addedToDirectoryDateKey], options: [])
             }else{
 
@@ -637,6 +654,7 @@ class TreeViewModel {
             // 过滤隐藏文件
             // Filter hidden files
             contents = contents.filter { url in
+                if url.path.hasPrefix("/VirtualFinderTagsFolder") { return true }
 
                 // 获取隐藏属性
                 // Get hidden attribute
@@ -663,6 +681,7 @@ class TreeViewModel {
             // 过滤出目录列表
             // Filter out directory list
             var subFolders = contents.filter { url in
+                if url.path.hasPrefix("/VirtualFinderTagsFolder") { return true }
                 guard let isDirectoryResourceValue = try? url.resourceValues(forKeys: [.isDirectoryKey]), let isDirectory = isDirectoryResourceValue.isDirectory else {
                     return false
                 }
@@ -673,7 +692,10 @@ class TreeViewModel {
             // Sort
             // 卷列表保持字母序
             // Volume list maintains alphabetical order
-            if folderURL.path == "root" {
+            if folderURL.path.hasPrefix("/VirtualFinderTagsFolder") {
+                // 不排序，保持 FinderTag.all 的顺序
+                // No sorting, keep FinderTag.all order
+            } else if folderURL.path == "root" {
                 subFolders.sort { $0.lastPathComponent.lowercased().localizedStandardCompare($1.lastPathComponent.lowercased()) == .orderedAscending }
             }else{
                 let sortType = SortType(rawValue: Int(viewController.publicVar.profile.getValue(forKey: "dirTreeSortType")) ?? 0)
@@ -721,17 +743,14 @@ class TreeViewModel {
                     subFolders.sort { $0.lastPathComponent.lowercased().localizedStandardCompare($1.lastPathComponent.lowercased()) == .orderedAscending }
                 }
             }
-            
-            if globalVar.autoHideToolbar && folderURL.path == "root" {
-                subFolders.insert(URL(fileURLWithPath: "/PlaceholderForAutoHideToolbar"), at: 0)
-            }
 
             if folderURL.path == "root" {
-                let tags = TaggingSystem.getAllTags().reversed()
-                for tag in tags {
-                    let tagURL = URL(string: "file:///VirtualTagFolder/\(tag)/")!
-                    subFolders.insert(tagURL, at: 0)
-                }
+                let finderTagsURL = URL(string: "file:///VirtualFinderTagsFolder/")!
+                subFolders.insert(finderTagsURL, at: 0)
+            }
+
+            if globalVar.autoHideToolbar && folderURL.path == "root" {
+                subFolders.insert(URL(fileURLWithPath: "/PlaceholderForAutoHideToolbar"), at: 0)
             }
             
             let oldChildren=node.children
@@ -742,11 +761,15 @@ class TreeViewModel {
                 var fullPath = subFolder.absoluteString
                 if name == "/" { name = ROOT_NAME }
                 if name == "PlaceholderForAutoHideToolbar" {
-                    name = "Hidden Volume"
-                    fullPath = "file:///"
+                    name = "FlowVision"
+                    fullPath = "file:///FlowVisionTitleFolder/"
                 }
-                if subFolder.absoluteString.contains("VirtualTagFolder") {
-                    name = "Tag " + name
+                if subFolder.absoluteString.hasPrefix("file:///VirtualFinderTagsFolder") {
+                    if subFolder.absoluteString == "file:///VirtualFinderTagsFolder/" {
+                        name = NSLocalizedString("Finder Tags", comment: "Finder标签")
+                    }else{
+                        
+                    }
                 }
                 var newNode = TreeNode(name: name, fullPath: fullPath)
                 

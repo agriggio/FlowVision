@@ -254,7 +254,7 @@ func getFileInfo(file: FileModel) {
         }
         
     } catch {
-        log("Error fetching file info (size and date): \(error)")
+        log("Error fetching file info (size and date): \(error)", level: .warn)
     }
 }
 
@@ -333,7 +333,7 @@ func findImageURLs(in directoryURL: URL, maxDepth: Int, maxImages: Int, preferDi
                     break
                 }
             } catch {
-                log("Error accessing contents of directory \(currentDirectory): \(error)")
+                log("Error accessing contents of directory \(currentDirectory): \(error)", level: .warn)
             }
         }
 
@@ -413,7 +413,7 @@ func findImageURLs(in directoryURL: URL, maxDepth: Int, maxImages: Int, preferDi
                     }
                 }
             } catch {
-                log("Error accessing contents of directory \(currentDirectory): \(error)")
+                log("Error accessing contents of directory \(currentDirectory): \(error)", level: .warn)
             }
         }
 
@@ -648,7 +648,7 @@ func createCompositeImage(background: NSImage, images: [NSImage], isVideos: [Boo
 func compressImageToThumbnail(_ image: NSImage) -> NSImage? {
 
     guard let myImageSource = createCGImageSource(from: image) else {
-        log(stderr, "Image source is NULL.");
+        log("Image source is NULL.", level: .warn);
         return nil
     }
     let thumbnailOptions = [kCGImageSourceCreateThumbnailWithTransform : kCFBooleanTrue!,
@@ -659,7 +659,7 @@ func compressImageToThumbnail(_ image: NSImage) -> NSImage? {
     ] as CFDictionary;
 
     guard let scaledImage = CGImageSourceCreateThumbnailAtIndex(myImageSource,0,thumbnailOptions)else {
-        log(stderr, "Image not created from image source.");
+        log("Image not created from image source.", level: .warn)
         return nil
     };
 
@@ -672,7 +672,7 @@ func createCGImageSource(from nsImage: NSImage) -> CGImageSource? {
     // 尝试将NSImage转换为CGImage
     // Try to convert NSImage to CGImage
     guard let cgImage = nsImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-        log("Failed to create CGImage from NSImage")
+        log("Failed to create CGImage from NSImage", level: .warn)
         // Unable to create CGImage from NSImage
         return nil
     }
@@ -681,7 +681,7 @@ func createCGImageSource(from nsImage: NSImage) -> CGImageSource? {
     // Create Bitmap Representation of CGImage
     let bitmapRep = NSBitmapImageRep(cgImage: cgImage)
     guard let data = bitmapRep.representation(using: .png, properties: [:]) else {
-        log("Failed to get data from Bitmap Representation")
+        log("Failed to get data from Bitmap Representation", level: .warn)
         // Unable to get data from Bitmap Representation
         return nil
     }
@@ -768,27 +768,43 @@ func getVideoThumbnailFFmpeg(for url: URL, at time: TimeInterval = 10) -> NSImag
                     try? FileManager.default.removeItem(at: URL(fileURLWithPath: thumbnailPath))
                     return thumbnail
                 } else {
-                    log("Failed to load thumbnail image from \(thumbnailPath)")
+                    log("Failed to load thumbnail image from \(thumbnailPath)", level: .warn)
                 }
             } else {
-                log("FFmpeg command failed with return code \(String(describing: returnCode))")
-                log(output ?? "")
+                log("FFmpeg command failed with return code \(String(describing: returnCode))", level: .warn)
+                log(output ?? "", level: .warn)
             }
         } else {
-            log("Failed to get return code")
+            log("Failed to get return code", level: .warn)
         }
     } else {
-        log("FFmpeg execution failed")
+        log("FFmpeg execution failed", level: .warn)
     }
     // return getFileTypeIcon(url: url)
     return nil
 }
 
 func getFileTypeIcon(url: URL) -> NSImage {
-    return NSWorkspace.shared.icon(forFile: url.absoluteString.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!)
+    // 替身文件：icon(forFile:) 依赖扩展名，无标准扩展名时会返回错误图标
+    // 需手动解析目标路径取正确类型图标，再叠加替身小箭头徽章
+    // Alias file: icon(forFile:) relies on extension; resolve to get correct type icon, then overlay alias badge
+    if let values = try? url.resourceValues(forKeys: [.isAliasFileKey, .isSymbolicLinkKey]),
+       values.isAliasFile == true,
+       let resolved = try? URL(resolvingAliasFileAt: url) {
+        let targetIcon = NSWorkspace.shared.icon(forFile: resolved.path)
+        return targetIcon
+    }
+    return NSWorkspace.shared.icon(forFile: url.path)
 }
 
 func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil, isPreferInternalThumb: Bool = false, maxPixSize: Int = 512) -> NSImage? {
+    
+    if let values = try? url.resourceValues(forKeys: [.isAliasFileKey, .isSymbolicLinkKey]),
+       values.isAliasFile == true,
+       let resolved = try? URL(resolvingAliasFileAt: url),
+       let thumb = getImageThumb(url: resolved, size: oriSize, refSize: refSize, isPreferInternalThumb: isPreferInternalThumb) {
+        return thumb
+    }
     
     let size: NSSize? = oriSize != nil ? NSSize(width: round(oriSize!.width), height: round(oriSize!.height)) : nil
     
@@ -908,7 +924,6 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
         // 若指定了大小则特殊处理
         // Special handling if size is specified
         if size != nil && "ai" != url.pathExtension.lowercased() {
-            // log(size.width,size.height)
             if let resizedImage=getResizedImage(url: url, size: size!, isRawUseEmbeddedThumb: true){
                 return resizedImage
             }
@@ -923,7 +938,7 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
         let myOptions = [kCGImageSourceShouldCache : kCFBooleanFalse] as CFDictionary;
         
         guard let myImageSource = CGImageSourceCreateWithURL(url as NSURL, myOptions) else {
-            log(stderr, "Image source is NULL.");
+            log("Image source is NULL.", level: .warn);
             // return getFileTypeIcon(url: url)
             return nil
         }
@@ -949,7 +964,7 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
         }
         
         guard let scaledImage = CGImageSourceCreateThumbnailAtIndex(myImageSource,0,thumbnailOptions)else {
-            log(stderr, "Thumbnail not created from image source.");
+            log("Thumbnail not created from image source.", level: .warn);
             // return getFileTypeIcon(url: url)
             return nil
         };
@@ -988,7 +1003,7 @@ func getFullExifThumbnail(url: URL, size oriSize: NSSize? = nil, rotate: Int = 0
     let myOptions = [kCGImageSourceShouldCache : kCFBooleanFalse] as CFDictionary;
     
     guard let myImageSource = CGImageSourceCreateWithURL(url as NSURL, myOptions) else {
-        log(stderr, "Image source is NULL.");
+        log("Image source is NULL.", level: .warn);
         // return getFileTypeIcon(url: url)
         return nil
     }
@@ -1001,7 +1016,7 @@ func getFullExifThumbnail(url: URL, size oriSize: NSSize? = nil, rotate: Int = 0
     ] as CFDictionary;
     
     guard let scaledImage = CGImageSourceCreateThumbnailAtIndex(myImageSource,0,thumbnailOptions) else {
-        log(stderr, "Thumbnail not created from image source.");
+        log("Thumbnail not created from image source.", level: .warn);
         // return getFileTypeIcon(url: url)
         return nil
     };
@@ -1325,7 +1340,7 @@ func getVideoMetadataFormatedFFmpeg(for url: URL) -> [(String, String)]? {
             result = result + formatVideoMetadata(stream)
         }
     } else {
-        log("FFprobe execution failed")
+        log("FFprobe execution failed", level: .warn)
     }
     
     if let session = FFmpegKitWrapper.shared.executeFFprobeCommand(ffprobeArgsAudio),
@@ -1334,7 +1349,7 @@ func getVideoMetadataFormatedFFmpeg(for url: URL) -> [(String, String)]? {
             result = result + [("-","-")] + formatAudioMetadata(stream)
         }
     } else {
-        log("FFprobe execution failed")
+        log("FFprobe execution failed", level: .warn)
     }
     
     if result.isEmpty {
@@ -1577,7 +1592,7 @@ func getVideoMetadataFFmpeg(for url: URL) -> String? {
             return output
         }
     } else {
-        log("FFprobe execution failed")
+        log("FFprobe execution failed", level: .warn)
     }
     return nil
 }
@@ -1631,7 +1646,7 @@ func getVideoResolutionAndDateFFmpeg(for url: URL) -> (Int,Int,Date?)? {
             return (width,height,creationTime)
         }
     } else {
-        log("FFprobe execution failed")
+        log("FFprobe execution failed", level: .warn)
     }
     return nil
 }
@@ -1684,12 +1699,17 @@ func getVideoResolutionFFmpeg(for url: URL) -> NSSize? {
             }
         }
     } else {
-        log("FFprobe execution failed")
+        log("FFprobe execution failed", level: .warn)
     }
     return nil
 }
 
 func getImageInfo(url: URL, needMetadata: Bool) -> ImageInfo? {
+    if let values = try? url.resourceValues(forKeys: [.isAliasFileKey, .isSymbolicLinkKey]),
+       values.isAliasFile == true,
+       let resolved = try? URL(resolvingAliasFileAt: url) {
+        return getImageInfo(url: resolved, needMetadata: needMetadata)
+    }
     // let defaultSize = DEFAULT_SIZE
     if globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()) {
         if globalVar.HandledNotNativeSupportedVideoExtensions.contains(url.pathExtension.lowercased()){
@@ -1910,7 +1930,7 @@ func formatExifData(_ imageProperties: [String: Any], isVideo: Bool, needWarp: B
         ("FileCreatedTime" as CFString, NSLocalizedString("Exif-FileCreatedTime", comment: "文件创建时间")),
         ("FileModifiedTime" as CFString, NSLocalizedString("Exif-FileModifiedTime", comment: "文件修改时间")),
         ("FileAddedTime" as CFString, NSLocalizedString("Exif-FileAddedTime", comment: "文件添加时间")),
-        ("Rating" as CFString, NSLocalizedString("Exif-Rating", comment: "星级")),
+        ("Rating" as CFString, NSLocalizedString("Exif-Rating", comment: "评级")),
         
         ("-" as CFString, "-"),
         
@@ -2080,6 +2100,61 @@ func formatExifData(_ imageProperties: [String: Any], isVideo: Bool, needWarp: B
     }
     
     return formattedData
+}
+
+func readRating(from imageURL: URL) -> Int? {
+    guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil) else { return nil }
+    guard let metadata = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil) else { return nil }
+    
+    //let namespace = "http://ns.adobe.com/xap/1.0/"
+    let prefix = "xmp"
+    let key = "Rating"
+    
+    if let tag = CGImageMetadataCopyTagWithPath(metadata, nil, "\(prefix):\(key)" as CFString) {
+        if let value = CGImageMetadataTagCopyValue(tag) as? String {
+            return Int(value)
+        }
+    }
+    
+    return nil
+}
+
+func writeRating(inputURL: URL, outputURL: URL, rating: Int) -> Bool {
+    // SMB 等网络盘在覆盖写入后有时会把文件标成隐藏，先记下原始状态并在写入后恢复
+    let originalIsHidden = (try? inputURL.resourceValues(forKeys: [.isHiddenKey]))?.isHidden ?? false
+
+    guard let imageSource = CGImageSourceCreateWithURL(inputURL as CFURL, nil) else { return false }
+    guard let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else { return false }
+    guard let metadata = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil) else { return false }
+    guard let mutableMetadata = CGImageMetadataCreateMutableCopy(metadata) else { return false }
+    
+    let namespace = "http://ns.adobe.com/xap/1.0/"
+    let prefix = "xmp"
+    let key = "Rating"
+    
+    // 在使用自定义命名空间时需要
+//    guard CGImageMetadataRegisterNamespaceForPrefix(mutableMetadata, namespace as CFString, prefix as CFString, nil) else { return }
+    
+    if rating == 0 {
+        // 0 评级：移除现有 Rating 标签（如果存在），而不是写入 0
+        CGImageMetadataRemoveTagWithPath(mutableMetadata, nil, "\(prefix):\(key)" as CFString)
+    } else {
+        let value = rating as CFNumber
+        guard CGImageMetadataSetValueWithPath(mutableMetadata, nil, "\(prefix):\(key)" as CFString, value) else { return false}
+    }
+    
+    guard let imageDestination = CGImageDestinationCreateWithURL(outputURL as CFURL, CGImageSourceGetType(imageSource)!, 1, nil) else { return false }
+    
+    CGImageDestinationAddImageAndMetadata(imageDestination, image, mutableMetadata, nil)
+    
+    guard CGImageDestinationFinalize(imageDestination) else { return false }
+
+    // 写入后恢复原来的「隐藏」属性，避免 SMB 等网络盘把文件错误标成隐藏
+    var values = URLResourceValues()
+    values.isHidden = originalIsHidden
+    var tmpURL = outputURL
+    try? tmpURL.setResourceValues(values)
+    return true
 }
 
 func distanceBetweenPoints(_ point1: NSPoint, _ point2: NSPoint) -> CGFloat {

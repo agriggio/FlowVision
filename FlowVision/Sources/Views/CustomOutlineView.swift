@@ -104,73 +104,118 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
             }else{
                 actionItemOpenInNewTab.isEnabled=true
             }
-            
-            menu.addItem(NSMenuItem.separator())
-            
-            menu.addItem(withTitle: NSLocalizedString("Show in Finder", comment: "在Finder中显示"), action: #selector(actShowInFinder), keyEquivalent: "")
-            
-            let actionItemGetInfo = menu.addItem(withTitle: NSLocalizedString("file-rightmenu-get-info", comment: "显示简介"), action: #selector(actGetInfo), keyEquivalent: "i")
-            actionItemGetInfo.keyEquivalentModifierMask = []
-            
-            menu.addItem(NSMenuItem.separator())
 
-            let actionItemSort = menu.addItem(withTitle: NSLocalizedString("Sort", comment: "排序"), action: nil, keyEquivalent: "")
-            actionItemSort.keyEquivalentModifierMask = []
-            
-            let sortSubmenu = NSMenu()
-            let sortTypes: [(SortType, String)] = [
-                (.pathA, NSLocalizedString("sort-pathA", comment: "文件名")),
-                (.pathZ, NSLocalizedString("sort-pathZ", comment: "文件名(倒序)")),
-                (.createDateA, NSLocalizedString("sort-createDateA", comment: "创建日期")),
-                (.createDateZ, NSLocalizedString("sort-createDateZ", comment: "创建日期(倒序)")),
-                (.modDateA, NSLocalizedString("sort-modDateA", comment: "修改日期")),
-                (.modDateZ, NSLocalizedString("sort-modDateZ", comment: "修改日期(倒序)")),
-                (.addDateA, NSLocalizedString("sort-addDateA", comment: "添加日期")),
-                (.addDateZ, NSLocalizedString("sort-addDateZ", comment: "添加日期(倒序)"))
-            ]
-
-            let currentDirTreeSortType = SortType(rawValue: Int(getViewController(self)!.publicVar.profile.getValue(forKey: "dirTreeSortType")) ?? 0)
-            
-            for (sortType, title) in sortTypes {
-                let item = sortSubmenu.addItem(withTitle: title, action: #selector(actSortByType(_:)), keyEquivalent: "")
-                item.representedObject = sortType
-                if sortType == currentDirTreeSortType {
-                    item.state = .on
+            if curRightClickedPath.hasPrefix("file:///VirtualFinderTagsFolder") {
+                
+            } else {
+                
+                menu.addItem(NSMenuItem.separator())
+                
+                menu.addItem(withTitle: NSLocalizedString("Show in Finder", comment: "在Finder中显示"), action: #selector(actShowInFinder), keyEquivalent: "")
+                
+                let actionItemGetInfo = menu.addItem(withTitle: NSLocalizedString("file-rightmenu-get-info", comment: "显示简介"), action: #selector(actGetInfo), keyEquivalent: "i")
+                actionItemGetInfo.keyEquivalentModifierMask = []
+                
+                menu.addItem(NSMenuItem.separator())
+                
+                let actionItemSort = menu.addItem(withTitle: NSLocalizedString("Sort", comment: "排序"), action: nil, keyEquivalent: "")
+                actionItemSort.keyEquivalentModifierMask = []
+                
+                let sortSubmenu = NSMenu()
+                let sortTypes: [(SortType, String)] = [
+                    (.pathA, NSLocalizedString("sort-pathA", comment: "文件名")),
+                    (.pathZ, NSLocalizedString("sort-pathZ", comment: "文件名(倒序)")),
+                    (.createDateA, NSLocalizedString("sort-createDateA", comment: "创建日期")),
+                    (.createDateZ, NSLocalizedString("sort-createDateZ", comment: "创建日期(倒序)")),
+                    (.modDateA, NSLocalizedString("sort-modDateA", comment: "修改日期")),
+                    (.modDateZ, NSLocalizedString("sort-modDateZ", comment: "修改日期(倒序)")),
+                    (.addDateA, NSLocalizedString("sort-addDateA", comment: "添加日期")),
+                    (.addDateZ, NSLocalizedString("sort-addDateZ", comment: "添加日期(倒序)"))
+                ]
+                
+                let currentDirTreeSortType = SortType(rawValue: Int(getViewController(self)!.publicVar.profile.getValue(forKey: "dirTreeSortType")) ?? 0)
+                
+                for (sortType, title) in sortTypes {
+                    let item = sortSubmenu.addItem(withTitle: title, action: #selector(actSortByType(_:)), keyEquivalent: "")
+                    item.representedObject = sortType
+                    if sortType == currentDirTreeSortType {
+                        item.state = .on
+                    }
                 }
+                
+                actionItemSort.submenu = sortSubmenu
+                
+                menu.addItem(NSMenuItem.separator())
+                
+                let actionItemDelete = menu.addItem(withTitle: NSLocalizedString("Move to Trash", comment: "移动到废纸篓"), action: #selector(actDelete), keyEquivalent: "\u{8}")
+                actionItemDelete.keyEquivalentModifierMask = []
+                
+                menu.addItem(NSMenuItem.separator())
+                
+                let actionItemRename = menu.addItem(withTitle: NSLocalizedString("Rename", comment: "重命名"), action: #selector(actRename), keyEquivalent: "r")
+                actionItemRename.keyEquivalentModifierMask = []
+                
+                let actionItemCopy = menu.addItem(withTitle: NSLocalizedString("Copy", comment: "复制"), action: #selector(actCopy), keyEquivalent: "c")
+                
+                let actionItemCopyPath = menu.addItem(withTitle: NSLocalizedString("Copy Path", comment: "复制路径"), action: #selector(actCopyPath), keyEquivalent: "")
+                
+                let actionItemPaste = menu.addItem(withTitle: NSLocalizedString("Paste", comment: "粘贴"), action: #selector(actPaste), keyEquivalent: "v")
+                actionItemPaste.isEnabled = canPasteOrMove
+                
+                let actionItemMove = menu.addItem(withTitle: NSLocalizedString("Move Here", comment: "移动到此"), action: #selector(actMove), keyEquivalent: "v")
+                actionItemMove.keyEquivalentModifierMask = [.command,.option]
+                actionItemMove.isEnabled = canPasteOrMove
+
+                menu.addItem(NSMenuItem.separator())
+
+                let finderTagMenu = NSMenu()
+                let finderTagMenuItem = NSMenuItem(title: NSLocalizedString("Finder Tags", comment: "Finder标签"), action: nil, keyEquivalent: "")
+                finderTagMenuItem.submenu = finderTagMenu
+
+                // if let folderURL = URL(string: curRightClickedPath) {
+                //     let currentTags = FinderTagHelper.readTags(from: folderURL)
+                //     for tag in FinderTag.all {
+                //         let item = finderTagMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actToggleFinderTag(_:)), keyEquivalent: "")
+                //         item.representedObject = tag.name
+                //         if currentTags.contains(tag.name) {
+                //             item.state = .on
+                //         }
+                //         item.image = tag.dotImage
+                //     }
+                // }
+
+                // finderTagMenu.addItem(NSMenuItem.separator())
+                // finderTagMenu.addItem(withTitle: NSLocalizedString("Remove All Tags", comment: "移除所有标签"), action: #selector(actRemoveAllFinderTags), keyEquivalent: "")
+
+                // finderTagMenu.addItem(NSMenuItem.separator())
+                finderTagMenu.addItem(withTitle: NSLocalizedString("Scan & Update Enhanced Index", comment: "扫描并更新增强索引"), action: #selector(actScanEnhancedIndex), keyEquivalent: "")
+
+                // let scanEnhancedIndexReadmeItem = NSMenuItem(title: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(actScanEnhancedIndexReadmeAction), keyEquivalent: "")
+                // scanEnhancedIndexReadmeItem.target = self
+                // finderTagMenu.addItem(scanEnhancedIndexReadmeItem)
+
+                finderTagMenu.addItem(NSMenuItem.separator())
+                finderTagMenu.addItem(withTitle: NSLocalizedString("Learn More...", comment: "了解更多..."), action: #selector(actTagLearnMore), keyEquivalent: "")
+
+                menu.addItem(finderTagMenuItem)
+                
+                menu.addItem(NSMenuItem.separator())
+                
+                let actionItemOpenInTerminal = menu.addItem(withTitle: NSLocalizedString("Open in Terminal", comment: "在终端中打开"), action: #selector(actOpenInTerminal), keyEquivalent: "")
+
+                menu.addItem(NSMenuItem.separator())
+
+                let actionItemNewFolder = menu.addItem(withTitle: NSLocalizedString("New Folder", comment: "新建文件夹"), action: #selector(actNewFolder), keyEquivalent: "n")
+                actionItemNewFolder.keyEquivalentModifierMask = [.command,.shift]
+                
             }
             
-            actionItemSort.submenu = sortSubmenu
-
-            menu.addItem(NSMenuItem.separator())
-            
-            let actionItemDelete = menu.addItem(withTitle: NSLocalizedString("Move to Trash", comment: "移动到废纸篓"), action: #selector(actDelete), keyEquivalent: "\u{8}")
-            actionItemDelete.keyEquivalentModifierMask = []
-            
-            menu.addItem(NSMenuItem.separator())
-            
-            let actionItemRename = menu.addItem(withTitle: NSLocalizedString("Rename", comment: "重命名"), action: #selector(actRename), keyEquivalent: "r")
-            actionItemRename.keyEquivalentModifierMask = []
-            
-            let actionItemCopy = menu.addItem(withTitle: NSLocalizedString("Copy", comment: "复制"), action: #selector(actCopy), keyEquivalent: "c")
-            
-            let actionItemCopyPath = menu.addItem(withTitle: NSLocalizedString("Copy Path", comment: "复制路径"), action: #selector(actCopyPath), keyEquivalent: "")
-            
-            let actionItemPaste = menu.addItem(withTitle: NSLocalizedString("Paste", comment: "粘贴"), action: #selector(actPaste), keyEquivalent: "v")
-            actionItemPaste.isEnabled = canPasteOrMove
-            
-            let actionItemMove = menu.addItem(withTitle: NSLocalizedString("Move Here", comment: "移动到此"), action: #selector(actMove), keyEquivalent: "v")
-            actionItemMove.keyEquivalentModifierMask = [.command,.option]
-            actionItemMove.isEnabled = canPasteOrMove
-
             menu.addItem(NSMenuItem.separator())
 
-            let actionItemOpenInTerminal = menu.addItem(withTitle: NSLocalizedString("Open in Terminal", comment: "在终端中打开"), action: #selector(actOpenInTerminal), keyEquivalent: "")
-            
-            menu.addItem(NSMenuItem.separator())
+            let actionItemAutoExpand = menu.addItem(withTitle: NSLocalizedString("Follow Current Folder", comment: "跟随当前目录"), action: #selector(actAutoExpand), keyEquivalent: "")
+            actionItemAutoExpand.keyEquivalentModifierMask = []
+            actionItemAutoExpand.state = globalVar.dirTreeAutoExpand ? .on : .off
 
-            let actionItemNewFolder = menu.addItem(withTitle: NSLocalizedString("New Folder", comment: "新建文件夹"), action: #selector(actNewFolder), keyEquivalent: "n")
-            actionItemNewFolder.keyEquivalentModifierMask = [.command,.shift]
-            
             menu.addItem(NSMenuItem.separator())
             
             let actionItemRefresh = menu.addItem(withTitle: NSLocalizedString("Refresh", comment: "刷新"), action: #selector(refreshAll), keyEquivalent: "r")
@@ -206,6 +251,11 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
     
     @objc func refreshAll() {
         getViewController(self)?.handleUserRefresh()
+    }
+
+    @objc func actAutoExpand() {
+        globalVar.dirTreeAutoExpand.toggle()
+        UserDefaults.standard.set(globalVar.dirTreeAutoExpand, forKey: "dirTreeAutoExpand")
     }
     
     @objc func actOpenInNewTab() {
@@ -248,7 +298,7 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
         }
         guard let url = url else {return}
         
-        renameAlert(urls: [url])
+        getViewController(self)?.handleRename(urls: [url])
 
         if curRightClickedIndex != self.selectedRowIndexes.first {
             refreshTreeView()
@@ -285,6 +335,11 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
         // 将文件URL添加到剪贴板
         // Add file URL to clipboard
         pasteboard.writeObjects(urls as [NSPasteboardWriting])
+
+        // 复制操作重置剪切模式
+        // Copy operation resets cut mode
+        globalVar.isCutMode = false
+        getViewController(self)?.clearCutItemsDimEffect()
     }
     
     @objc func actDelete(isByKeyboard: Bool = false, isShowPrompt: Bool = true) {
@@ -334,6 +389,32 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
         task.launchPath = "/usr/bin/open"
         task.arguments = ["-a", "Terminal", url.path]
         task.launch()
+    }
+
+    @objc func actToggleFinderTag(_ sender: NSMenuItem) {
+        guard let tagName = sender.representedObject as? String,
+              let url = URL(string: curRightClickedPath) else { return }
+        FinderTagHelper.toggleTag(tagName, on: [url])
+        getViewController(self)?.refreshFinderTagsForVisibleItems(urls: [url])
+    }
+
+    @objc func actRemoveAllFinderTags() {
+        guard let url = URL(string: curRightClickedPath) else { return }
+        FinderTagHelper.removeAllTags(from: [url])
+        getViewController(self)?.refreshFinderTagsForVisibleItems(urls: [url])
+    }
+
+    @objc func actScanEnhancedIndex() {
+        guard let url = URL(string: curRightClickedPath) else { return }
+        getViewController(self)?.handleScanEnhancedIndex(url: url)
+    }
+
+    @objc func actScanEnhancedIndexReadmeAction() {
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("scan-enhanced-index-info", comment: "扫描并更新增强索引说明..."))
+    }
+
+    @objc func actTagLearnMore() {
+        getViewController(self)?.handleTagLearnMore()
     }
 
     @objc func actSortByType(_ sender: NSMenuItem) {

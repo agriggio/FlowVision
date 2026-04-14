@@ -117,7 +117,7 @@ class CustomProfile: Codable {
                 let loadedStyle = try decoder.decode(CustomProfile.self, from: savedData)
                 return loadedStyle
             } catch {
-                log("Failed to decode CustomProfile: \(error)")
+                log("Failed to decode CustomProfile: \(error)", level: .error)
             }
         }
         // 读取异常时返回默认值
@@ -157,7 +157,11 @@ class PublicVar{
     var customZoomRatio: Double = 1.0
     var customZoomStep: Double = 0.1
     var currentTag:String? = nil
-    var finderTagFilter: String? = nil
+    var finderTagFilters: Set<String> = []
+    var isFinderTagFilterReversed: Bool = false
+    var isFinderTagFilterModeAnd: Bool = false
+    var ratingFilters: Set<Int> = []
+    var isRatingFilterReversed: Bool = false
 
     // 可一键切换的配置
     // Configuration that can be switched with one key
@@ -407,6 +411,21 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
     
     var dirURLCache: [URL] = []
     var dirURLCacheParameters: Any = []
+
+    // 加载进度条
+    // Loading progress bar
+    let progressBarHeight: CGFloat = 2.5
+    let progressShowDelay: TimeInterval = 1.0
+    let progressShowThreshold: Double = 0.5
+    var progressBarTrack: NSView!
+    var progressBarFill: NSView!
+    var progressFillWidthConstraint: NSLayoutConstraint?
+    var progressFillLeadingConstraint: NSLayoutConstraint?
+    var indeterminateTimer: Timer?
+    var progressDelayWorkItem: DispatchWorkItem?
+    var isProgressVisible = false
+    var pendingProgress: Double = 0
+    var progressSessionId: Int = 0
     
     // 搜索框
     // Search box
@@ -472,6 +491,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         // 全局拖动操作
         // Global drag operation
         collectionView.setDraggingSourceOperationMask([.every], forLocal: false)
+        
+        // 初始化加载进度条
+        // Initialize loading progress bar
+        setupProgressBar()
         
 //        publicVar.justifiedLayout.minimumInteritemSpacing=10
 //        publicVar.justifiedLayout.minimumLineSpacing=10
@@ -1198,10 +1221,6 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 //        }
         
         publicVar.toolbarTitle = shortTitle
-        
-        if publicVar.profile.getValue(forKey: "isWindowTitleShowStatistics") == "true" {
-            publicVar.toolbarTitle += " " + statisticInfo
-        }
 
         publicVar.titleStatisticInfo = statisticInfo
         view.window?.title = shortTitle
@@ -1327,6 +1346,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                     // publicVar.timer.intervalSafe(name: "recalcLayoutReloadData", second: 0.02+Double(i)*0.0001)
                                     collectionView.reloadData()
                                     collectionView.numberOfItems(inSection:0)
+                                    setProgress(1.0)
                                 }
                                 
                                 fileDB.lock()
@@ -1364,6 +1384,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                             if !keepScrollPos {
                                                 let newIndexPaths = indexPaths.dropFirst(curItemCount + indexPaths.count - nowLayoutCalcPos)
                                                 collectionView.insertItems(at: Set(newIndexPaths))
+                                                setProgress(Double(curItemCount+newIndexPaths.count)/Double(count))
                                             }
                                             if nowLayoutCalcPos == count {
                                                 fileDB.lock()
@@ -1533,67 +1554,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                                         log("Time taken to reach hidden snapshot reason 1: \(timeInterval) seconds")
                                         log("-----------------------------------------------------------")
                                         
-                                        // 向上或者后退时定位文件夹
-                                        // Locate folder when going up or back
-                                        if let (lastFolder,direction) = publicVar.folderStepForLocate.first {
-                                            
-                                            if let lastURL = URL(string: lastFolder),
-                                               let curURL = URL(string: curFolder),
-                                               lastURL.deletingLastPathComponent().absoluteString == curURL.absoluteString {
-                                                
-                                                publicVar.folderStepForLocate.removeAll()
-                                                
-                                                let targetFolderPath = lastURL.absoluteString
-                                                let targetKey = SortKeyFile(targetFolderPath, isDir: true, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)
-                                                
-                                                fileDB.lock()
-                                                if let index=fileDB.db[SortKeyDir(curFolder)]?.files.index(forKey: targetKey),
-                                                   let offset=fileDB.db[SortKeyDir(curFolder)]?.files.offset(of: index) {
-                                                    fileDB.unlock()
-                                                    let indexPath=IndexPath(item: offset, section: 0)
-                                                    collectionView.scrollToItems(at: [indexPath], scrollPosition: .nearestHorizontalEdge)
-                                                    collectionView.reloadData()
-                                                    collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath])
-                                                    collectionView.selectItems(at: [indexPath], scrollPosition: [])
-                                                    collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: [indexPath])
-                                                    setLoadThumbPriority(ifNeedVisable: true)
-                                                }else{
-                                                    fileDB.unlock()
-                                                }
-                                            }
-                                        }
-                                        
-                                        // 粘贴或移动后选中变更的文件
-                                        // Select changed files after paste or move
-                                        if !publicVar.filesForLocateAfterChange.isEmpty {
-                                            let targetPaths = publicVar.filesForLocateAfterChange
-                                            publicVar.filesForLocateAfterChange.removeAll()
-                                            
-                                            let targetPathSet = Set(targetPaths.map { $0.hasSuffix("/") ? String($0.dropLast()) : $0 })
-                                            var indexPaths: [IndexPath] = []
-                                            fileDB.lock()
-                                            if let files = fileDB.db[SortKeyDir(curFolder)]?.files {
-                                                for (offset, element) in files.enumerated() {
-                                                    let filePath = element.0.path
-                                                    let normalizedPath = filePath.hasSuffix("/") ? String(filePath.dropLast()) : filePath
-                                                    if targetPathSet.contains(normalizedPath) {
-                                                        indexPaths.append(IndexPath(item: offset, section: 0))
-                                                    }
-                                                }
-                                            }
-                                            fileDB.unlock()
-                                            
-                                            if !indexPaths.isEmpty {
-                                                let indexPathSet = Set(indexPaths)
-                                                collectionView.deselectAll(nil)
-                                                collectionView.scrollToItems(at: [indexPaths[0]], scrollPosition: .nearestHorizontalEdge)
-                                                collectionView.reloadData()
-                                                collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: indexPathSet)
-                                                collectionView.selectItems(at: indexPathSet, scrollPosition: [])
-                                                collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: indexPathSet)
-                                                setLoadThumbPriority(ifNeedVisable: true)
-                                            }
-                                        }
+                                        // 选中产生变化的文件（粘贴或移动后）
+                                        // Select files that have changed (after paste or move)
+                                        selectItemsNewChanged()
                                     }
                                     
                                     while snapshotQueue.count > 0{
@@ -1802,8 +1765,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 #endif
                     
                     if (overTime > 600 && LRUqueue.count >= 2) || (Int(memUse) > memUseLimit) || (debug && LRUqueue.count >= 2) {
-                        log("Memory free:", level: .warn)
-                        log(lastLRUItem.0.removingPercentEncoding, level: .warn)
+                        log("Memory free:", level: .info)
+                        log(lastLRUItem.0.removingPercentEncoding, level: .info)
                         // 由于先置目录再请求缩略图，所以此处可保证安全
                         // Safe here because directory is set before requesting thumbnails
                         
@@ -2197,6 +2160,12 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         if path.contains("Cryptomator") {
             return
         }
+
+        // 虚拟Finder标签目录不监听
+        // VirtualFinderTagsFolder directory doesn't listen
+        if path.hasPrefix("/VirtualFinderTagsFolder") {
+            return
+        }
         
         // 递归模式不监听
         // Recursive mode doesn't listen
@@ -2206,7 +2175,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
         
         watchFileDescriptor = open(path, O_EVTONLY)
         guard watchFileDescriptor != -1 else {
-            log("Failed to open directory, errno: \(errno)")
+            log("Failed to open directory, errno: \(errno)", level: .warn)
             return
         }
         

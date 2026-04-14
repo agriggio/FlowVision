@@ -12,7 +12,6 @@ class CustomCollectionViewItem: NSCollectionViewItem {
     @IBOutlet weak var imageViewObj: CustomThumbImageView!
     @IBOutlet weak var imageNameField: NSTextField!
     @IBOutlet weak var imageLabel: NSTextField!
-    @IBOutlet weak var imageTag: NSTextField!
     @IBOutlet weak var videoFlag: NSImageView!
     @IBOutlet weak var videoView: NSView!
     
@@ -27,6 +26,8 @@ class CustomCollectionViewItem: NSCollectionViewItem {
     
     var file = FileModel(path: "", ver: 0)
     var finderTagDotsView: NSView?
+    var ratingStarsView: NSView?
+    var aliasBadgeView: NSImageView?
     private var mouseDownLocation: NSPoint? = nil
     
     private var lastClickTime: TimeInterval = 0
@@ -63,12 +64,6 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         // 文件名标签
         // Filename label
         imageNameField.cell?.lineBreakMode = .byTruncatingTail
-        
-        // 左上角标签
-        // Top-left corner label
-        imageTag.wantsLayer = true
-        // imageTag.layer?.backgroundColor = NSColor.gray.withAlphaComponent(0.6).cgColor
-        // imageTag.layer?.cornerRadius = 4
         
         // 右上角标签
         // Top-right corner label
@@ -162,6 +157,7 @@ class CustomCollectionViewItem: NSCollectionViewItem {
             deselectedColor()
         }
         lastClickTime=0
+        updateCutDimEffect()
     }
 
     override func viewWillDisappear() {
@@ -207,50 +203,140 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         return itemFrame.intersects(visibleRectExtended)
     }
     
-    func refreshTagLabel(){
+    private func tagScaleFactor() -> CGFloat {
+        guard let vc = getViewController(collectionView!) else { return 1.0 }
+        let thumbSize = CGFloat(vc.publicVar.profile.thumbSize)
+        let baseScale = thumbSize / 512.0 * 1.0
+
+        let layoutCoefficient: CGFloat
+        switch vc.publicVar.profile.layoutType {
+        case .justified:
+            layoutCoefficient = 1.3
+        case .waterfall:
+            layoutCoefficient = 1.2
+        case .grid:
+            layoutCoefficient = 1.1
+        case .detail:
+            layoutCoefficient = 1.0
+        }
+
+        return max(1.0, min(2.5, baseScale * layoutCoefficient))
+    }
+
+    /// 根据评级返回对应颜色（1–5 星：灰 → 银 → 橙 → 黄 → 金，便于区分）
+    private static func color(forRating rating: Int) -> NSColor {
+        switch rating {
+        case 1: return NSColor(calibratedWhite: 0.5, alpha: 1)           // 灰
+        case 2: return NSColor(calibratedWhite: 0.7, alpha: 1)             // 浅灰/银
+        case 3: return NSColor.systemOrange                                // 橙
+        case 4: return NSColor(calibratedRed: 1, green: 0.88, blue: 0.2, alpha: 1)  // 黄
+        case 5: return NSColor(calibratedRed: 1, green: 0.68, blue: 0, alpha: 1)     // 金
+        default: return NSColor.systemGray
+        }
+    }
+
+    func refreshRatingStars() {
+        ratingStarsView?.removeFromSuperview()
+        ratingStarsView = nil
+
         let isShowThumbnailTag = getViewController(collectionView!)!.publicVar.profile.getValue(forKey: "isShowThumbnailTag") == "true"
-        
-        var tags = TaggingSystem.getFileTags(url: URL(string: file.path)!)
-        
-        if let rating = file.imageInfo?.rating {
-            let stars = String(repeating: "⭐️", count: rating)
-            tags.insert(stars, at: 0)
+        guard isShowThumbnailTag, let rating = file.imageInfo?.rating, rating >= 1, rating <= 5 else { return }
+
+        let scale = tagScaleFactor()
+        let starSize: CGFloat = round(13 * scale)
+        let spacing: CGFloat = round(2 * scale)
+        let inset: CGFloat = round(5 * scale)
+        let starCount = rating
+        let color = Self.color(forRating: rating)
+
+        let totalWidth = CGFloat(starCount) * starSize + CGFloat(starCount - 1) * spacing
+        let containerHeight = starSize
+
+        let container = NSView()
+        container.wantsLayer = true
+        container.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(container)
+
+        NSLayoutConstraint.activate([
+            container.leadingAnchor.constraint(equalTo: imageViewObj.leadingAnchor, constant: inset),
+            container.topAnchor.constraint(equalTo: imageViewObj.topAnchor, constant: inset-1),
+            container.widthAnchor.constraint(equalToConstant: totalWidth),
+            container.heightAnchor.constraint(equalToConstant: containerHeight),
+        ])
+
+        let config = NSImage.SymbolConfiguration(pointSize: starSize - 2, weight: .medium, scale: .medium)
+        let fillImage = NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Star")?.withSymbolConfiguration(config)
+        fillImage?.isTemplate = true
+        let outlineImage = NSImage(systemSymbolName: "star", accessibilityDescription: "Star outline")?.withSymbolConfiguration(config)
+        outlineImage?.isTemplate = true
+
+        for i in 0..<starCount {
+            let starFrame = NSRect(x: CGFloat(i) * (starSize + spacing), y: 0, width: starSize, height: starSize)
+            let starContainer = NSView(frame: starFrame)
+
+            let fillView = NSImageView(frame: starContainer.bounds)
+            fillView.image = fillImage
+            fillView.contentTintColor = color
+            fillView.imageScaling = .scaleProportionallyDown
+
+            let outlineView = NSImageView(frame: starContainer.bounds)
+            outlineView.image = outlineImage
+            outlineView.contentTintColor = .white
+            outlineView.imageScaling = .scaleProportionallyDown
+
+            starContainer.addSubview(fillView)
+            starContainer.addSubview(outlineView)
+            container.addSubview(starContainer)
         }
-        
-        if !TAGGING_FEATURE_ENABLED {
-            tags.removeAll()
-        }
-        
-        imageTag.stringValue = tags.joined(separator: "\n")
-        
-        if imageTag.stringValue != "" && isShowThumbnailTag {
-            // 先调整文字大小
-            // Adjust text size first
-            imageTag.sizeToFit()
-            imageTag.frame.origin.x = imageViewObj.frame.origin.x + 5
-            imageTag.frame.origin.y = imageViewObj.frame.origin.y + imageViewObj.frame.height - imageTag.frame.height - 5
-            imageTag.isHidden=false
-        } else {
-            imageTag.isHidden=true
-        }
+
+        ratingStarsView = container
     }
     
     override func prepareForReuse() {
         super.prepareForReuse()
         finderTagDotsView?.removeFromSuperview()
         finderTagDotsView = nil
+        ratingStarsView?.removeFromSuperview()
+        ratingStarsView = nil
+        aliasBadgeView?.removeFromSuperview()
+        aliasBadgeView = nil
     }
 
     func refreshFinderTagDots() {
         finderTagDotsView?.removeFromSuperview()
         finderTagDotsView = nil
 
+        let isShowThumbnailTag = getViewController(collectionView!)!.publicVar.profile.getValue(forKey: "isShowThumbnailTag") == "true"
+        if !isShowThumbnailTag { return }
+
         let tags = file.finderTags.compactMap { FinderTag.byName($0) }
         guard !tags.isEmpty else { return }
 
-        let dotSize: CGFloat = 8
-        let spacing: CGFloat = 2
-        let totalWidth = CGFloat(tags.count) * dotSize + CGFloat(tags.count - 1) * spacing
+        let colorTags = tags.filter { $0.isSystemColorLabel }
+        let textTags = tags.filter { !$0.isSystemColorLabel }
+        let sortedTags = colorTags + textTags
+
+        let scale = tagScaleFactor()
+        let dotSize: CGFloat = round(8 * scale)
+        let spacing: CGFloat = round(2 * scale)
+        let fontSize: CGFloat = round(9 * scale)
+        let textPaddingH: CGFloat = round(4 * scale)
+        let textPaddingV: CGFloat = round(2 * scale)
+        let inset: CGFloat = round(6 * scale)
+        let textFont = NSFont.systemFont(ofSize: fontSize)
+
+        var totalWidth: CGFloat = 0
+        for (i, tag) in sortedTags.enumerated() {
+            if i > 0 { totalWidth += spacing }
+            if tag.isSystemColorLabel {
+                totalWidth += dotSize
+            } else {
+                let textWidth = (tag.name as NSString).size(withAttributes: [.font: textFont]).width
+                totalWidth += ceil(textWidth) + textPaddingH * 2
+            }
+        }
+
+        let containerHeight = dotSize + textPaddingV * 2
 
         let container = NSView()
         container.wantsLayer = true
@@ -258,21 +344,73 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         self.view.addSubview(container)
 
         NSLayoutConstraint.activate([
-            container.leadingAnchor.constraint(equalTo: imageViewObj.leadingAnchor, constant: 5),
-            container.bottomAnchor.constraint(equalTo: imageViewObj.bottomAnchor, constant: -5),
+            container.leadingAnchor.constraint(equalTo: imageViewObj.leadingAnchor, constant: inset),
+            container.bottomAnchor.constraint(equalTo: imageViewObj.bottomAnchor, constant: -(inset-1)),
             container.widthAnchor.constraint(equalToConstant: totalWidth),
-            container.heightAnchor.constraint(equalToConstant: dotSize),
+            container.heightAnchor.constraint(equalToConstant: containerHeight),
         ])
 
-        for (i, tag) in tags.enumerated() {
-            let dot = NSView(frame: NSRect(x: CGFloat(i) * (dotSize + spacing), y: 0, width: dotSize, height: dotSize))
-            dot.wantsLayer = true
-            dot.layer?.backgroundColor = tag.color.cgColor
-            dot.layer?.cornerRadius = dotSize / 2
-            container.addSubview(dot)
+        var xOffset: CGFloat = 0
+        for tag in sortedTags {
+            if tag.isSystemColorLabel {
+                let dotY = (containerHeight - dotSize) / 2
+                let dot = NSView(frame: NSRect(x: xOffset, y: dotY, width: dotSize, height: dotSize))
+                dot.wantsLayer = true
+                dot.layer?.backgroundColor = tag.color.cgColor
+                dot.layer?.cornerRadius = dotSize / 2
+                let isLight = (tag.color.usingColorSpace(.genericGray)?.whiteComponent ?? 0) > 0.9
+                dot.layer?.borderColor = (isLight ? NSColor.gray : NSColor.white).cgColor
+                dot.layer?.borderWidth = round(0.5 * scale * 2) / 2
+                container.addSubview(dot)
+                xOffset += dotSize + spacing
+            } else {
+                let textWidth = (tag.name as NSString).size(withAttributes: [.font: textFont]).width
+                let labelWidth = ceil(textWidth) + textPaddingH * 2
+                let label = NSTextField(labelWithString: tag.name)
+                label.font = textFont
+                label.textColor = .black
+                label.alignment = .center
+                label.wantsLayer = true
+                label.layer?.borderColor = NSColor.gray.cgColor
+                label.layer?.borderWidth = round(1 * scale * 2) / 2
+                label.layer?.cornerRadius = round(3 * scale)
+                label.layer?.backgroundColor = tag.color.withAlphaComponent(0.7).cgColor
+                label.frame = NSRect(x: xOffset, y: 0, width: labelWidth, height: containerHeight)
+                container.addSubview(label)
+                xOffset += labelWidth + spacing
+            }
         }
 
         finderTagDotsView = container
+    }
+
+    func refreshAliasBadge() {
+        aliasBadgeView?.removeFromSuperview()
+        aliasBadgeView = nil
+
+        guard file.isAlias, let badgeImage = NSImage(named: "AliasBadge") else { return }
+
+        let badgeRatio = badgeImage.size.width / badgeImage.size.height
+        let scale = tagScaleFactor() * 1.8
+        let badgeHeight = round(16 * scale)
+        let badgeWidth = round(badgeHeight * badgeRatio)
+        let inset: CGFloat = round(0 * scale)
+
+        let badge = NSImageView()
+        badge.image = badgeImage
+        badge.imageScaling = .scaleProportionallyUpOrDown
+        badge.wantsLayer = true
+        badge.translatesAutoresizingMaskIntoConstraints = false
+        self.view.addSubview(badge)
+
+        NSLayoutConstraint.activate([
+            badge.leadingAnchor.constraint(equalTo: imageViewObj.leadingAnchor, constant: inset),
+            badge.bottomAnchor.constraint(equalTo: imageViewObj.bottomAnchor, constant: -inset),
+            badge.widthAnchor.constraint(equalToConstant: badgeWidth),
+            badge.heightAnchor.constraint(equalToConstant: badgeHeight),
+        ])
+
+        aliasBadgeView = badge
     }
 
     func configureWithImage(_ fileModel: FileModel, playAnimation: Bool = false) {
@@ -302,14 +440,20 @@ class CustomCollectionViewItem: NSCollectionViewItem {
             imageViewObj.isFolder = false
         }
 
-        // 左上角标签
-        // Top-left corner label
-        refreshTagLabel()
+        // 左下角替身徽章
+        // Bottom-left alias badge
+        refreshAliasBadge()
 
+        // 左上角评级
+        // Top-left rating stars
+        refreshRatingStars()
+
+        // 左下角Finder标签
+        // Bottom-left finder tag dots
         refreshFinderTagDots()
 
-        // 右上角标签
-        // Top-right corner label
+        // 右上角HDR/RAW标签
+        // Top-right corner HDR/RAWlabel
         let isShowThumbnailBadge = getViewController(collectionView!)!.publicVar.profile.getValue(forKey: "isShowThumbnailBadge") == "true"
         let isRawImage = globalVar.HandledRawExtensions.contains(imageViewObj.url?.pathExtension.lowercased() ?? "noExtention")
         if isRawImage {
@@ -407,7 +551,17 @@ class CustomCollectionViewItem: NSCollectionViewItem {
 //            }
         }
         
-        
+        updateCutDimEffect()
+    }
+    
+    func updateCutDimEffect() {
+        let isCut = globalVar.cutItemPaths.contains(file.path)
+        let targetAlpha: CGFloat = isCut ? 0.4 : 1.0
+        // 由于布局过程中alpha值可能会被重置，需要等待布局完成后再设置
+        // Since the alpha value may be reset during layout, it needs to be set after layout is complete
+        DispatchQueue.main.async { [weak self] in
+            self?.view.alphaValue = targetAlpha
+        }
     }
     
     func setTooltip(){
@@ -470,7 +624,16 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         if getViewController(collectionView!)!.publicVar.isRecursiveMode {
             tooltipParts.append("\(relativePathLabel): \(relativePath)")
         }
-        
+
+        if curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
+            let parentDirectoryLabel = NSLocalizedString("Location", comment: "位置")
+            var parentDirectory = (filePath as NSString).deletingLastPathComponent
+            if parentDirectory.hasPrefix("file:") {
+                parentDirectory = String(parentDirectory.dropFirst("file:".count))
+            }
+            tooltipParts.append("\(parentDirectoryLabel): \(parentDirectory)")
+        }
+
         // 如果文件大小存在，添加文件大小
         // If file size exists, add file size
         if let fileSize = fileSize {
@@ -824,6 +987,7 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                         actOpenInNewTab()
                     }else{
                         viewController.openLargeImageFromIndexPath(selfIndexPath)
+                        viewController.largeImageView.videoPreventDoubleClickOpenPauseFlag = true
                     }
                 }else if viewController.publicVar.isInLargeView && viewController.publicVar.isInLargeViewAfterAnimate {
                     viewController.closeLargeImage([])
@@ -906,6 +1070,9 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                 if !types.contains(.fileURL) {
                     canPasteOrMove=false
                 }
+
+                let curFolder = getViewController(collectionView!)!.fileDB.curFolder
+                let isVirtualFinderTagsFolder = curFolder.hasPrefix("file:///VirtualFinderTagsFolder")
                 
                 // 弹出菜单
                 // Show context menu
@@ -936,7 +1103,21 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                         actionItemOpenInNewTab.isEnabled=true
                     }
                 }
-                
+
+                let isRecursive = getViewController(collectionView!)?.publicVar.isRecursiveMode ?? false
+                let canShowParent = selectedCount == 1 && (isRecursive || getViewController(collectionView!)!.fileDB.curFolder.hasPrefix("file:///VirtualFinderTagsFolder"))
+                if canShowParent, let url = URL(string: file.path) {
+                    let parentURL = url.deletingLastPathComponent()
+                    if !parentURL.path.isEmpty && parentURL.absoluteString != url.absoluteString {
+                        let actionItemShowParent = menu.addItem(withTitle: NSLocalizedString("Show in Original Folder", comment: "在原文件夹中显示"), action: #selector(actShowParentInNewTab), keyEquivalent: "")
+                        if isWindowNumMax() {
+                            actionItemShowParent.isEnabled = false
+                        } else {
+                            actionItemShowParent.isEnabled = true
+                        }
+                    }
+                }
+
                 menu.addItem(NSMenuItem.separator())
                 
                 addOpenWithSubMenu(to: menu)
@@ -966,65 +1147,36 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                 let actionItemCopyPath = menu.addItem(withTitle: NSLocalizedString("Copy Path", comment: "复制路径"), action: #selector(actCopyPath), keyEquivalent: "")
                 
                 let actionItemPaste = menu.addItem(withTitle: NSLocalizedString("Paste", comment: "粘贴"), action: #selector(actPaste), keyEquivalent: "v")
-                actionItemPaste.isEnabled = canPasteOrMove
+                actionItemPaste.isEnabled = canPasteOrMove && !isVirtualFinderTagsFolder
                 
                 let actionItemMove = menu.addItem(withTitle: NSLocalizedString("Move Here", comment: "移动到此"), action: #selector(actMove), keyEquivalent: "v")
                 actionItemMove.keyEquivalentModifierMask = [.command,.option]
-                actionItemMove.isEnabled = canPasteOrMove
+                actionItemMove.isEnabled = canPasteOrMove && !isVirtualFinderTagsFolder
                 
                 let actionItemShare = menu.addItem(withTitle: NSLocalizedString("Share...", comment: "共享..."), action: #selector(actShare(_:)), keyEquivalent: "")
-                
+
                 menu.addItem(NSMenuItem.separator())
-                                
-                let actionItemCopyToDownload = menu.addItem(withTitle: NSLocalizedString("copy-to-download", comment: "复制到\"下载\"文件夹"), action: #selector(actCopyToDownload), keyEquivalent: "n")
-                actionItemCopyToDownload.keyEquivalentModifierMask = []
-
-                let actionItemMoveToDownload = menu.addItem(withTitle: NSLocalizedString("move-to-download", comment: "移动到\"下载\"文件夹"), action: #selector(actMoveToDownload), keyEquivalent: "m")
-                actionItemMoveToDownload.keyEquivalentModifierMask = []
-                
-                menu.addItem(NSMenuItem.separator())
-
-                if TAGGING_FEATURE_ENABLED {
-                    
-                    // 创建标签子菜单
-                    // Create tags submenu
-                    let tagMenu = NSMenu()
-                    let currentTag = getViewController(collectionView!)?.publicVar.currentTag ?? TaggingSystem.defaultTag
-                    let tagMenuItem = NSMenuItem(title: NSLocalizedString("Tag", comment: "标签")+" "+currentTag, action: nil, keyEquivalent: "")
-                    tagMenuItem.submenu = tagMenu
-                    
-                    // 添加标记/取消标记选项
-                    let toggleTagItem = tagMenu.addItem(withTitle: NSLocalizedString("Toggle Tag", comment: "标记/取消标记"), action: #selector(actTag), keyEquivalent: "b")
-                    toggleTagItem.keyEquivalentModifierMask = []
-                    
-                    tagMenu.addItem(NSMenuItem.separator())
-                    
-                    // 添加不同标签选项
-                    // Add different tag options
-                    for tag in TaggingSystem.getAvailableTags() {
-                        let tagItem = tagMenu.addItem(withTitle: tag, action: #selector(actChangeTag(_:)), keyEquivalent: "")
-                        tagItem.representedObject = tag
-                        if tag == currentTag {
-                            tagItem.state = .on
-                        }
-                    }
-                    
-                    menu.addItem(tagMenuItem)
-                }
-
-                let finderTagMenu = NSMenu()
-                let finderTagMenuItem = NSMenuItem(title: NSLocalizedString("Finder Tags", comment: "Finder标签"), action: nil, keyEquivalent: "")
-                finderTagMenuItem.submenu = finderTagMenu
 
                 let selectedURLs = getViewController(collectionView!)?.publicVar.selectedUrls() ?? []
                 let tagsPerURL = selectedURLs.map { FinderTagHelper.readTags(from: $0) }
+                let allTags = FinderTag.all
+                let activeTagNames: Set<String> = {
+                    guard !selectedURLs.isEmpty else { return [] }
+                    return Set(allTags.filter { tag in
+                        tagsPerURL.allSatisfy { $0.contains(tag.name) }
+                    }.map { $0.name })
+                }()
 
-                for (i, tag) in FinderTag.all.enumerated() {
-                    let item = finderTagMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actToggleFinderTag(_:)), keyEquivalent: "\(i + 1)")
+                let finderTagMenu = NSMenu()
+                let finderTagTitle = NSLocalizedString("Finder Tags", comment: "Finder标签")
+                let finderTagMenuItem = NSMenuItem(title: finderTagTitle, action: nil, keyEquivalent: "")
+                finderTagMenuItem.submenu = finderTagMenu
+
+                for (i, tag) in allTags.enumerated() {
+                    let item = finderTagMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actToggleFinderTag(_:)), keyEquivalent: (i + 1 <= 9) ? "\(i + 1)" : "")
                     item.keyEquivalentModifierMask = [.command]
                     item.representedObject = tag.name
-
-                    if !selectedURLs.isEmpty && tagsPerURL.allSatisfy({ $0.contains(tag.name) }) {
+                    if activeTagNames.contains(tag.name) {
                         item.state = .on
                     }
                     item.image = tag.dotImage
@@ -1033,7 +1185,86 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                 finderTagMenu.addItem(NSMenuItem.separator())
                 finderTagMenu.addItem(withTitle: NSLocalizedString("Remove All Tags", comment: "移除所有标签"), action: #selector(actRemoveAllFinderTags), keyEquivalent: "")
 
+                if file.isDir {
+                    finderTagMenu.addItem(NSMenuItem.separator())
+                    finderTagMenu.addItem(withTitle: NSLocalizedString("Scan & Update Enhanced Index", comment: "扫描并更新增强索引"), action: #selector(actScanEnhancedIndex), keyEquivalent: "")
+                }
+
+                finderTagMenu.addItem(NSMenuItem.separator())
+                finderTagMenu.addItem(withTitle: NSLocalizedString("Learn More...", comment: "了解更多..."), action: #selector(actTagLearnMore), keyEquivalent: "")
+
+                let colorTags = allTags//.filter { $0.colorIndex != nil && $0.colorIndex != 0 }
+                if !colorTags.isEmpty {
+                    let dotsItem = NSMenuItem()
+                    let dotsView = FinderTagDotsView(tags: colorTags, activeTags: activeTagNames) { [weak self, weak menu] tagName in
+                        guard let self = self, let menu = menu else { return }
+                        getViewController(self.collectionView!)?.handleToggleFinderTag(tagName)
+                        menu.cancelTracking()
+                    }
+                    dotsView.onHoverChanged = { [weak finderTagMenuItem] index in
+                        guard let finderTagMenuItem = finderTagMenuItem else { return }
+                        if index >= 0 && index < colorTags.count {
+                            let tag = colorTags[index]
+                            if activeTagNames.contains(tag.name) {
+                                finderTagMenuItem.title = NSLocalizedString("Remove", comment: "移除") + "\"\(tag.name)\""
+                            } else {
+                                finderTagMenuItem.title = NSLocalizedString("Add", comment: "添加") + "\"\(tag.name)\""
+                            }
+                            let attrTitle = NSAttributedString(
+                                string: finderTagMenuItem.title,
+                                attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+                            )
+                            finderTagMenuItem.attributedTitle = attrTitle
+                        } else {
+                            finderTagMenuItem.attributedTitle = nil
+                            finderTagMenuItem.title = finderTagTitle
+                        }
+                    }
+                    dotsItem.view = dotsView
+                    menu.addItem(dotsItem)
+                }
+
                 menu.addItem(finderTagMenuItem)
+                
+                let rateSubMenu = NSMenu(title: NSLocalizedString("Rating", comment: "评级"))
+                let rateMenuItem = NSMenuItem(title: NSLocalizedString("Rating", comment: "评级"), action: nil, keyEquivalent: "")
+                rateMenuItem.submenu = rateSubMenu
+                rateMenuItem.isEnabled = file.type == .image
+
+                // 5~1 星，带星形预览
+                for rating in (1...5).reversed() {
+                    let stars = String(repeating: "★", count: rating) + String(repeating: "☆", count: 5 - rating)
+                    let title = "\(stars)  (\(rating))"
+                    let item = NSMenuItem(title: title, action: #selector(actRate(_:)), keyEquivalent: "\(rating)")
+                    item.keyEquivalentModifierMask = [.control]
+                    item.tag = rating
+                    item.target = self
+                    rateSubMenu.addItem(item)
+                }
+
+                // 无评级
+                let clearTitle = NSLocalizedString("No Rating", comment: "无评级")
+                let clearItem = NSMenuItem(title: clearTitle, action: #selector(actRate(_:)), keyEquivalent: "0")
+                clearItem.keyEquivalentModifierMask = [.control]
+                clearItem.tag = 0
+                clearItem.target = self
+                rateSubMenu.addItem(clearItem)
+
+                rateSubMenu.addItem(NSMenuItem.separator())
+                
+                let rateReadmeItem = NSMenuItem(title: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(actRateReadmeAction), keyEquivalent: "")
+                rateReadmeItem.target = self
+                rateSubMenu.addItem(rateReadmeItem)
+                
+                menu.addItem(rateMenuItem)
+                
+                menu.addItem(NSMenuItem.separator())
+                                
+                let actionItemCopyToDownload = menu.addItem(withTitle: NSLocalizedString("copy-to-download", comment: "复制到\"下载\"文件夹"), action: #selector(actCopyToDownload), keyEquivalent: "n")
+                actionItemCopyToDownload.keyEquivalentModifierMask = []
+
+                let actionItemMoveToDownload = menu.addItem(withTitle: NSLocalizedString("move-to-download", comment: "移动到\"下载\"文件夹"), action: #selector(actMoveToDownload), keyEquivalent: "m")
+                actionItemMoveToDownload.keyEquivalentModifierMask = []
 
                 menu.addItem(NSMenuItem.separator())
 
@@ -1042,6 +1273,7 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                 let newMenu = NSMenu()
                 let newMenuItem = NSMenuItem(title: NSLocalizedString("New", comment: "新建"), action: nil, keyEquivalent: "")
                 newMenuItem.submenu = newMenu
+                newMenuItem.isEnabled = !isVirtualFinderTagsFolder
                 
                 // 添加新建文件夹选项
                 // Add new folder option
@@ -1075,15 +1307,6 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         super.rightMouseUp(with: event)
     }
 
-    @objc func actChangeTag(_ sender: NSMenuItem) {
-        guard let tag = sender.representedObject as? String else { return }
-        getViewController(collectionView!)?.handleChangeCurrentTag(tag: tag)
-    }
-
-    @objc func actTag() {
-        getViewController(collectionView!)?.handleTagging()
-    }
-
     @objc func actToggleFinderTag(_ sender: NSMenuItem) {
         guard let tagName = sender.representedObject as? String else { return }
         getViewController(collectionView!)?.handleToggleFinderTag(tagName)
@@ -1093,7 +1316,29 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         let urls = getViewController(collectionView!)?.publicVar.selectedUrls() ?? []
         guard !urls.isEmpty else { return }
         FinderTagHelper.removeAllTags(from: urls)
-        getViewController(collectionView!)?.refreshFinderTagsForVisibleItems()
+        getViewController(collectionView!)?.refreshFinderTagsForVisibleItems(urls: urls)
+    }
+
+    @objc func actScanEnhancedIndex() {
+        guard file.isDir, let url = URL(string: file.path) else { return }
+        getViewController(collectionView!)?.handleScanEnhancedIndex(url: url)
+    }
+
+    @objc func actScanEnhancedIndexReadmeAction() {
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("scan-enhanced-index-info", comment: "扫描并更新增强索引说明..."))
+    }
+
+    @objc func actTagLearnMore() {
+        getViewController(collectionView!)?.handleTagLearnMore()
+    }
+    
+    @objc func actRate(_ sender: NSMenuItem) {
+        let rating = sender.tag
+        getViewController(collectionView!)?.handleRating(rating: rating)
+    }
+    
+    @objc func actRateReadmeAction() {
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("rating-info", comment: "对于评级的说明..."))
     }
 
     @objc func actRefresh() {
@@ -1122,6 +1367,19 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         }
     }
 
+    @objc func actShowParentInNewTab() {
+        guard let url = URL(string: file.path) else { return }
+        let parentURL = url.deletingLastPathComponent()
+        guard !parentURL.path.isEmpty, parentURL.absoluteString != url.absoluteString else { return }
+        var parentPath = parentURL.absoluteString
+        if !parentPath.hasSuffix("/") {
+            parentPath += "/"
+        }
+        if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+            _ = appDelegate.createNewWindow(parentPath)
+        }
+    }
+
     @objc func actShowInFinder() {
 //        let folderPath = (file.path.replacingOccurrences(of: "file://", with: "").removingPercentEncoding! as NSString).deletingLastPathComponent
 //        NSWorkspace.shared.selectFile(file.path.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!, inFileViewerRootedAtPath: folderPath)
@@ -1140,7 +1398,7 @@ class CustomCollectionViewItem: NSCollectionViewItem {
     
     @objc func actRename() {
         guard let urls = getViewController(collectionView!)?.publicVar.selectedUrls() else { return }
-        renameAlert(urls: urls);
+        getViewController(collectionView!)?.handleRename(urls: urls);
     }
     
     @objc func actNewFolder() {
@@ -1236,13 +1494,23 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         }
     }
     
+    private func resolveAliasIfNeeded(_ url: URL) -> URL {
+        if let values = try? url.resourceValues(forKeys: [.isAliasFileKey, .isSymbolicLinkKey]),
+           values.isAliasFile == true,
+           let resolved = try? URL(resolvingAliasFileAt: url) {
+            return resolved
+        }
+        return url
+    }
+    
     private func getRepresentativeUrls(for fileUrls: [URL]) -> [URL] {
         var representativeUrls: [String: URL] = [:]
         
         for fileUrl in fileUrls {
-            let fileExtension = fileUrl.pathExtension.lowercased()
+            let resolved = resolveAliasIfNeeded(fileUrl)
+            let fileExtension = resolved.pathExtension.lowercased()
             if representativeUrls[fileExtension] == nil {
-                representativeUrls[fileExtension] = fileUrl
+                representativeUrls[fileExtension] = resolved
             }
         }
         
@@ -1279,7 +1547,8 @@ class CustomCollectionViewItem: NSCollectionViewItem {
         guard let appURL = sender.representedObject as? URL else { return }
         guard let fileUrls = getViewController(collectionView!)?.getSelectedURLs() else { return }
         
-        NSWorkspace.shared.open(fileUrls, withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration(), completionHandler: { (app, error) in
+        let resolvedUrls = fileUrls.map { resolveAliasIfNeeded($0) }
+        NSWorkspace.shared.open(resolvedUrls, withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration(), completionHandler: { (app, error) in
             if let error = error {
                 log("Error opening file: \(error.localizedDescription)")
             } else if let app = app {

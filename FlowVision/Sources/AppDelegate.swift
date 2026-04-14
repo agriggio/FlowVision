@@ -43,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var activatePanScrollReadmeMenuItem: NSMenuItem!
     @IBOutlet weak var toggleRawUseEmbeddedThumbMenuItem: NSMenuItem!
     @IBOutlet weak var toggleRawUseEmbeddedThumbReadmeMenuItem: NSMenuItem!
+    @IBOutlet weak var showFinderTagsAndRatingMenuItem: NSMenuItem!
     
     var commonParentPath=""
     
@@ -53,6 +54,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             GeneralSettingsViewController(),
             CustomSettingsViewController(),
             ActionsSettingsViewController(),
+            TaggingSettingsViewController(),
             AdvancedSettingsViewController()
         ],
         animated: true,
@@ -173,13 +175,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             globalVar.doNotUseFFmpeg = doNotUseFFmpeg
         }
         if let portableMode = UserDefaults.standard.value(forKey: "portableMode") as? Bool {
-            globalVar.portableMode = portableMode
+            // Temporary disable portable mode feature
+            // globalVar.portableMode = portableMode
         }
         if let videoPlayRememberPosition = UserDefaults.standard.value(forKey: "videoPlayRememberPosition") as? Bool {
             globalVar.videoPlayRememberPosition = videoPlayRememberPosition
         }
         if let videoPlaySequentialPlay = UserDefaults.standard.value(forKey: "videoPlaySequentialPlay") as? Bool {
             globalVar.videoPlaySequentialPlay = videoPlaySequentialPlay
+        }
+        if let videoVolume = UserDefaults.standard.value(forKey: "videoVolume") as? Float {
+            globalVar.videoVolume = videoVolume
         }
         if let useInternalPlayer = UserDefaults.standard.value(forKey: "useInternalPlayer") as? Bool {
             globalVar.useInternalPlayer = useInternalPlayer
@@ -199,8 +205,27 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         if let keepFilterStateWhenSwitchFolder = UserDefaults.standard.value(forKey: "keepFilterStateWhenSwitchFolder") as? Bool {
             globalVar.keepFilterStateWhenSwitchFolder = keepFilterStateWhenSwitchFolder
         }
+        if let dirTreeAutoExpand = UserDefaults.standard.value(forKey: "dirTreeAutoExpand") as? Bool {
+            globalVar.dirTreeAutoExpand = dirTreeAutoExpand
+        }
+        if let largeImageViewShowTagsAndRating = UserDefaults.standard.value(forKey: "largeImageViewShowTagsAndRating") as? Bool {
+            globalVar.largeImageViewShowTagsAndRating = largeImageViewShowTagsAndRating
+        }
+        if let enhancedIndexEnabled = UserDefaults.standard.value(forKey: "enhancedIndexEnabled") as? Bool {
+            globalVar.enhancedIndexEnabled = enhancedIndexEnabled
+        }
         globalVar.myFavoritesArray = defaults.array(forKey: "globalVar.myFavoritesArray") as? [String] ?? [String]()
         
+        if let savedLabels = UserDefaults.standard.array(forKey: CustomTagView.userDefaultsKey) as? [[String: Any]] {
+            FinderTag.customLabels = savedLabels.compactMap { dict in
+                guard let name = dict["name"] as? String else { return nil }
+                return (name, dict["colorIndex"] as? Int)
+            }
+        } else {
+            FinderTag.customLabels = FinderTag.systemColorLabels.map { ($0.name, $0.colorIndex) }
+        }
+        //UserDefaults.standard.removeObject(forKey: CustomTagView.userDefaultsKey)
+
         // requestAppleEventsPermission()
         
         favoritesMenu.removeAllItems()
@@ -211,7 +236,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
 
         // 初始化标签系统
         // Initialize tagging system
-        TaggingSystem.initialize()
+        EnhancedIndex.initialize()
 
         log("End applicationWillFinishLaunching")
         // End applicationWillFinishLaunching
@@ -236,6 +261,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
 
     func applicationWillTerminate(_ aNotification: Notification) {
+        EnhancedIndex.flushPendingSave()
         log("App EXIT")
         log("-----------------------------------------------------------")
         // Logger.shared.clearLogFile()
@@ -284,13 +310,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 if !tmp.hasSuffix("/"){
                     tmp += "/"
                 }
-                openFolder=getFileStyleFolderPath(tmp+"xxx")
+                openFolder=getFileSchemeAbsParentFolderPath(tmp+"xxx")
             }else{
                 // 如果打开文件
                 // If opening file
-                openFolder=getFileStyleFolderPath(path)
+                openFolder=getFileSchemeAbsParentFolderPath(path)
                 if globalVar.portableMode,
-                   let originalSize=getImageInfo(url: URL(string: getFileStylePath(path))!, needMetadata: false)?.size{
+                   let originalSize=getImageInfo(url: URL(string: getFileSchemeAbsPath(path))!, needMetadata: false)?.size{
                     globalVar.startSpeedUpImageSizeCache=originalSize
                 }
             }
@@ -353,8 +379,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             path = FileManager.default.currentDirectoryPath
         }
         
-        var file = path.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)!
-        file = file.hasPrefix("file://") ? file : "file://" + file
+        var file = getFileSchemeAbsPath(path)
         if let url=URL(string: file){
             NSDocumentController.shared.noteNewRecentDocumentURL(url)
         }
@@ -424,8 +449,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     
     func openImageInTargetWindow(_ openPath: String, windowController: NSWindowController){
         guard let viewController = windowController.contentViewController as? ViewController else {return}
-        let folderPath=getFileStyleFolderPath(openPath)
-        let path=getFileStylePath(openPath)
+        let folderPath=getFileSchemeAbsParentFolderPath(openPath)
+        let path=getFileSchemeAbsPath(openPath)
         
         viewController.publicVar.openFromFinderPath=path
         viewController.OpenLargeImageFromFinder(path: path)
@@ -493,12 +518,22 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             
             if globalVar.myFavoritesArray.count > 0 {
                 for (index, folderPath) in globalVar.myFavoritesArray.enumerated() {
+                    if folderPath == FavoritesPopoverViewController.separatorValue {
+                        favoritesMenu.addItem(NSMenuItem.separator())
+                        continue
+                    }
+                    
+                    let displayTitle = folderPath
+                        .replacingOccurrences(of: "file://", with: "")
+                        .removingPercentEncoding!
+                        .replacingOccurrences(of: "/VirtualFinderTagsFolder", with: NSLocalizedString("Finder Tags", comment: "Finder标签"))
                     let folderMenuItem = NSMenuItem(
-                        title: folderPath.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!,
+                        title: displayTitle,
                         action: #selector(pathClick(_:)),
                         keyEquivalent: ""
                     )
                     folderMenuItem.target = self
+                    folderMenuItem.representedObject = folderPath
                     
                     // 创建子菜单
                     // Create submenu
@@ -577,7 +612,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
 
             if mainViewController.publicVar.folderStepStack.count > 0 {
                 for item in mainViewController.publicVar.folderStepStack {
-                    let menuItem = NSMenuItem(title: item.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!, action: #selector(pathClick(_:)), keyEquivalent: "")
+                    let historyDisplayTitle = item
+                        .replacingOccurrences(of: "file://", with: "")
+                        .removingPercentEncoding!
+                        .replacingOccurrences(of: "/VirtualFinderTagsFolder", with: NSLocalizedString("Finder Tags", comment: "Finder标签"))
+                    let menuItem = NSMenuItem(title: historyDisplayTitle, action: #selector(pathClick(_:)), keyEquivalent: "")
+                    menuItem.representedObject = item
                     menuItem.target = self
                     historyMenu.addItem(menuItem)
                 }
@@ -667,10 +707,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             lockRotationMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             lockZoomMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
             lockMirrorMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
-            activatePanScrollMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
-            activatePanScrollReadmeMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
-            toggleRawUseEmbeddedThumbMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
-            toggleRawUseEmbeddedThumbReadmeMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
+            activatePanScrollMenuItem.isHidden = !(mainViewController.publicVar.isInLargeView && mainViewController.largeImageView.file.type == .image)
+            activatePanScrollReadmeMenuItem.isHidden = !(mainViewController.publicVar.isInLargeView && mainViewController.largeImageView.file.type == .image)
+            toggleRawUseEmbeddedThumbMenuItem.isHidden = !(mainViewController.publicVar.isInLargeView && mainViewController.largeImageView.file.type == .image)
+            toggleRawUseEmbeddedThumbReadmeMenuItem.isHidden = !(mainViewController.publicVar.isInLargeView && mainViewController.largeImageView.file.type == .image)
+
+            showFinderTagsAndRatingMenuItem.state = globalVar.largeImageViewShowTagsAndRating ? .on : .off
+            showFinderTagsAndRatingMenuItem.isHidden = !mainViewController.publicVar.isInLargeView
         }
     }
     
@@ -741,7 +784,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             // 如果焦点在OutlineView
             // If focus is on OutlineView
             if mainViewController.publicVar.isOutlineViewFirstResponder{
-                if mainViewController.outlineView.getFirstSelectedUrl() == nil {
+                if let url = mainViewController.outlineView.getFirstSelectedUrl() {
+                    if url.absoluteString.hasPrefix("file:///VirtualFinderTagsFolder") {
+                        return false
+                    }
+                } else {
                     return false
                 }
             }
@@ -763,6 +810,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return false
             }
             if mainViewController.publicVar.isInLargeView {
+                return false
+            }
+            if mainViewController.fileDB.curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
                 return false
             }
             let pasteboard = NSPasteboard.general
@@ -801,6 +851,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 return false
             }
         }
+        // 锁定缩放、镜像
+        // Lock zoom, mirror
+        if menuItem.action == #selector(toggleLockZoom(_:)) || menuItem.action == #selector(toggleLockMirror(_:)) {
+            if mainViewController.largeImageView.file.type != .image {
+                return false
+            }
+        }
         return true
     }
     
@@ -813,7 +870,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         guard let mainViewController=getMainViewController() else {return}
         log("Clicked on \(sender.title)")
 
-        guard let url=URL(string: getFileStylePath(sender.title)) else {return}
+        let rawPath = (sender.representedObject as? String) ?? sender.title
+        guard let url=URL(string: getFileSchemeAbsPath(rawPath)) else {return}
         if mainViewController.publicVar.isInLargeView {
             mainViewController.closeLargeImage(0)
         }
@@ -879,6 +937,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     @IBAction func editMove(_ sender: NSMenuItem){
+        // 如果焦点在标准文本控件上，使用系统默认的移动行为（不支持）
+        // If focus is on standard text controls, use system default move behavior (not supported)
+        if let firstResponder = NSApp.keyWindow?.firstResponder {
+            if firstResponder is NSTextView || firstResponder is NSTextField { return }
+        }
         getMainViewController()?.handleMove()
     }
     
@@ -893,6 +956,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         }
         
         guard let mainViewController=getMainViewController() else{return}
+        
+        // 先清除上一次剪切的变淡效果
+        // Clear dim effect from previous cut
+        mainViewController.clearCutItemsDimEffect()
+        
+        // 收集即将被剪切的文件路径
+        // Collect file paths about to be cut
+        var cutUrls: [URL] = []
+        if mainViewController.publicVar.isInLargeView {
+            cutUrls = [URL(string: mainViewController.largeImageView.file.path)].compactMap { $0 }
+        } else if mainViewController.publicVar.isOutlineViewFirstResponder {
+            if let url = mainViewController.outlineView.getFirstSelectedUrl() {
+                cutUrls = [url]
+            }
+        } else if mainViewController.publicVar.isCollectionViewFirstResponder {
+            cutUrls = mainViewController.publicVar.selectedUrls()
+        }
         
         // 复用复制逻辑，将文件URL复制到剪贴板
         // Reuse copy logic, copy file URLs to pasteboard
@@ -914,6 +994,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         // 设置剪切模式标志，下次粘贴时将执行移动操作
         // Set cut mode flag, next paste will perform move operation
         globalVar.isCutMode = true
+        
+        // 记录被剪切的路径并应用变淡效果
+        // Record cut paths and apply dim effect
+        globalVar.cutItemPaths = Set(cutUrls.map { $0.absoluteString })
+        mainViewController.applyCutItemsDimEffect()
     }
     
     @IBAction func editCopy(_ sender: NSMenuItem){
@@ -942,19 +1027,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
                 mainViewController.handleCopy()
             }
         }
-        
-        // 复制操作重置剪切模式
-        // Copy operation resets cut mode
-        globalVar.isCutMode = false
     }
     
     @IBAction func editPaste(_ sender: NSMenuItem){
+        // 如果焦点在标准文本控件上，使用系统默认的粘贴行为
+        // If focus is on standard text controls, use system default paste behavior
+        if let firstResponder = NSApp.keyWindow?.firstResponder {
+            if firstResponder is NSTextView || firstResponder is NSTextField {
+                firstResponder.tryToPerform(#selector(NSText.paste(_:)), with: nil)
+                return
+            }
+        }
         getMainViewController()?.handlePaste()
     }
     
     @IBAction func editDelete(_ sender: NSMenuItem){
         // 注意：由于未知原因有时无法触发，因此主要在按键监听里处理
         // Note: Sometimes cannot trigger for unknown reasons, so mainly handled in key listener
+        // 如果焦点在标准文本控件上，不处理，因为单键无法触发，这里做个防御操作
+        // If focus is on standard text controls, do not handle, because single key cannot trigger, here is a defensive operation
+        if let firstResponder = NSApp.keyWindow?.firstResponder {
+            if firstResponder is NSTextView || firstResponder is NSTextField { return }
+        }
         guard let mainViewController=getMainViewController() else{return}
         if mainViewController.publicVar.isInLargeView {
             mainViewController.handleDelete()
@@ -1008,6 +1102,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         let printInfo = NSPrintInfo.shared
         
         pageLayout.runModal(with: printInfo)
+    }
+
+    @IBAction func toggleShowFinderTagsAndRating(_ sender: NSMenuItem){
+        getMainViewController()?.toggleLargeImageViewShowTagsAndRating()
     }
 
     @IBAction func toggleLockRotation(_ sender: NSMenuItem){

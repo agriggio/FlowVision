@@ -22,7 +22,7 @@ extension ViewController {
         do {
             try fileManager.createDirectory(at: tempRoot, withIntermediateDirectories: true)
         } catch {
-            log("Failed to create temp folder for promised files: \(error)")
+            log("Failed to create temp folder for promised files: \(error)", level: .error)
             return false
         }
         
@@ -32,7 +32,7 @@ extension ViewController {
         for receiver in receivers {
             receiver.receivePromisedFiles(atDestination: tempRoot, options: [:], operationQueue: .main) { [weak self] fileURL, error in
                 if let error = error {
-                    log("Failed to receive promised file: \(error)")
+                    log("Failed to receive promised file: \(error)", level: .error)
                 } else {
                     receivedURLs.append(fileURL)
                 }
@@ -137,10 +137,10 @@ extension ViewController {
                         
                         try FileManager.default.createDirectory(at: newFolderURL, withIntermediateDirectories: true, attributes: nil)
                         log("Successfully created folder: \(newFolderURL.path)")
-                        // Create folder succeeded
+                        publicVar.filesForLocateAfterChange = [newFolderURL.absoluteString]
                         return (true,newFolderURL)
                     } catch {
-                        log("Failed to create folder: \(error)")
+                        log("Failed to create folder: \(error)", level: .error)
                         // Create folder failed
                     }
                 }
@@ -216,9 +216,10 @@ extension ViewController {
                         publicVar.fileChangedCount += 1
                         
                         log("Successfully created text file: \(newFileURL.path)")
+                        publicVar.filesForLocateAfterChange = [newFileURL.absoluteString]
                         return (true,newFileURL)
                     } catch {
-                        log("Failed to create text file: \(error)")
+                        log("Failed to create text file: \(error)", level: .error)
                     }
                 }
             }
@@ -239,6 +240,10 @@ extension ViewController {
             
             handleCopy()
             handleMove(targetURL: newFolderURL)
+            
+            if let newFolderURL = newFolderURL {
+                publicVar.filesForLocateAfterChange = [newFolderURL.absoluteString]
+            }
             
             // 还原剪贴板内容
             // Restore pasteboard content
@@ -318,6 +323,7 @@ extension ViewController {
         // 复制操作重置剪切模式
         // Copy operation resets cut mode
         globalVar.isCutMode = false
+        clearCutItemsDimEffect()
     }
     
     func handleCopyToDownload() {
@@ -340,6 +346,7 @@ extension ViewController {
         // If in cut mode, perform move operation instead of copy
         if globalVar.isCutMode {
             globalVar.isCutMode = false
+            clearCutItemsDimEffect()
             handleMove(targetURL: targetURL, pasteboard: pasteboard)
             return
         }
@@ -434,13 +441,14 @@ extension ViewController {
         // 记录成功粘贴的目标路径，用于刷新后选中
         // Record successfully pasted destination paths for selection after refresh
         var successfulDestURLs: [String] = []
+        var indexCopyPairs: [(sourcePath: String, destPath: String)] = []
         defer {
             publicVar.isInFileOperation = false
             if !successfulDestURLs.isEmpty {
                 triggerFinderSound()
                 publicVar.filesForLocateAfterChange = successfulDestURLs
                 var ifRefresh = true
-                if publicVar.isRecursiveMode {
+                if publicVar.isRecursiveMode || curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
                     fileDB.lock()
                     ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
                     fileDB.unlock()
@@ -448,6 +456,9 @@ extension ViewController {
                 if ifRefresh {
                     scheduledRefresh()
                 }
+            }
+            if !indexCopyPairs.isEmpty {
+                EnhancedIndex.handleFilesCopied(indexCopyPairs)
             }
         }
         
@@ -459,6 +470,7 @@ extension ViewController {
         publicVar.isKeyEventEnabled = false
         for item in items {
             guard let fileURL = URL(string: item.string(forType: .fileURL) ?? "") else { continue }
+            let prevSuccessCount = successfulDestURLs.count
             var destURL = destinationURL.appendingPathComponent(fileURL.lastPathComponent)
 
             if ifAutoRenameWhenDifferentSource {
@@ -480,7 +492,7 @@ extension ViewController {
                         successfulDestURLs.append(destURL.absoluteString)
                         publicVar.fileChangedCount += 1
                     } catch {
-                        log("Failed to paste \(fileURL): \(error)")
+                        log("Failed to paste \(fileURL): \(error)", level: .error)
                     }
                 } else if shouldSkipAll {
                     continue
@@ -491,7 +503,7 @@ extension ViewController {
                         successfulDestURLs.append(destURL.absoluteString)
                         publicVar.fileChangedCount += 1
                     } catch {
-                        log("Failed to paste \(fileURL): \(error)")
+                        log("Failed to paste \(fileURL): \(error)", level: .error)
                     }
                 } else {
                     let userChoice = showReplaceDialog(for: destURL, isSingle: items.count == 1, isMove: false)
@@ -503,7 +515,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to paste \(fileURL): \(error)")
+                            log("Failed to paste \(fileURL): \(error)", level: .error)
                         }
                     case .replaceAll:
                         shouldReplaceAll = true
@@ -513,7 +525,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to paste \(fileURL): \(error)")
+                            log("Failed to paste \(fileURL): \(error)", level: .error)
                         }
                     case .autoRename:
                         destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
@@ -522,7 +534,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to paste \(fileURL): \(error)")
+                            log("Failed to paste \(fileURL): \(error)", level: .error)
                         }
                     case .autoRenameAll:
                         shouldAutoRenameAll = true
@@ -532,7 +544,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to paste \(fileURL): \(error)")
+                            log("Failed to paste \(fileURL): \(error)", level: .error)
                         }
                     case .skip:
                         continue
@@ -550,8 +562,13 @@ extension ViewController {
                     successfulDestURLs.append(destURL.absoluteString)
                     publicVar.fileChangedCount += 1
                 } catch {
-                    log("Failed to paste \(fileURL): \(error)")
+                    log("Failed to paste \(fileURL): \(error)", level: .error)
                 }
+            }
+            if successfulDestURLs.count > prevSuccessCount,
+               let destStr = successfulDestURLs.last,
+               let destPath = URL(string: destStr)?.path {
+                indexCopyPairs.append((sourcePath: fileURL.path, destPath: destPath))
             }
         }
         publicVar.isKeyEventEnabled = StoreIsKeyEventEnabled
@@ -577,6 +594,7 @@ extension ViewController {
         // 重置剪切模式，防止直接调用handleMove后isCutMode残留为true
         // Reset cut mode to prevent isCutMode remaining true after direct handleMove calls
         globalVar.isCutMode = false
+        clearCutItemsDimEffect()
         
         // 按住Option则为复制
         // Hold Option to copy
@@ -675,6 +693,7 @@ extension ViewController {
         // 记录成功粘贴的目标路径，用于刷新后选中
         // Record successfully pasted destination paths for selection after refresh
         var successfulDestURLs: [String] = []
+        var indexMovePairs: [(oldPath: String, newPath: String)] = []
         defer {
             publicVar.isInFileOperation = false
             if !successfulDestURLs.isEmpty {
@@ -686,7 +705,7 @@ extension ViewController {
                     pasteboard.clearContents()
                 }
                 var ifRefresh = true
-                if publicVar.isRecursiveMode {
+                if publicVar.isRecursiveMode || curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
                     fileDB.lock()
                     ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
                     fileDB.unlock()
@@ -694,6 +713,9 @@ extension ViewController {
                 if ifRefresh {
                     scheduledRefresh()
                 }
+            }
+            if !indexMovePairs.isEmpty {
+                EnhancedIndex.handleFilesMoved(indexMovePairs)
             }
         }
         
@@ -705,6 +727,7 @@ extension ViewController {
         publicVar.isKeyEventEnabled = false
         for item in items {
             guard let fileURL = URL(string: item.string(forType: .fileURL) ?? "") else { continue }
+            let prevSuccessCount = successfulDestURLs.count
             var destURL = destinationURL.appendingPathComponent(fileURL.lastPathComponent)
             
             // 如果是在同一目录移动，则不作动作
@@ -726,7 +749,7 @@ extension ViewController {
                         successfulDestURLs.append(destURL.absoluteString)
                         publicVar.fileChangedCount += 1
                     } catch {
-                        log("Failed to move \(fileURL): \(error)")
+                        log("Failed to move \(fileURL): \(error)", level: .error)
                     }
                 } else if shouldSkipAll {
                     continue
@@ -737,7 +760,7 @@ extension ViewController {
                         successfulDestURLs.append(destURL.absoluteString)
                         publicVar.fileChangedCount += 1
                     } catch {
-                        log("Failed to move \(fileURL): \(error)")
+                        log("Failed to move \(fileURL): \(error)", level: .error)
                     }
                 } else {
                     let userChoice = showReplaceDialog(for: destURL, isSingle: items.count == 1, isMove: true)
@@ -749,7 +772,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to move \(fileURL): \(error)")
+                            log("Failed to move \(fileURL): \(error)", level: .error)
                         }
                     case .replaceAll:
                         shouldReplaceAll = true
@@ -759,7 +782,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to move \(fileURL): \(error)")
+                            log("Failed to move \(fileURL): \(error)", level: .error)
                         }
                     case .autoRename:
                         destURL = getUniqueDestinationURL(for: destURL, isInPlace: false)
@@ -768,7 +791,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to move \(fileURL): \(error)")
+                            log("Failed to move \(fileURL): \(error)", level: .error)
                         }
                     case .autoRenameAll:
                         shouldAutoRenameAll = true
@@ -778,7 +801,7 @@ extension ViewController {
                             successfulDestURLs.append(destURL.absoluteString)
                             publicVar.fileChangedCount += 1
                         } catch {
-                            log("Failed to move \(fileURL): \(error)")
+                            log("Failed to move \(fileURL): \(error)", level: .error)
                         }
                     case .skip:
                         continue
@@ -796,8 +819,13 @@ extension ViewController {
                     successfulDestURLs.append(destURL.absoluteString)
                     publicVar.fileChangedCount += 1
                 } catch {
-                    log("Failed to move \(fileURL): \(error)")
+                    log("Failed to move \(fileURL): \(error)", level: .error)
                 }
+            }
+            if successfulDestURLs.count > prevSuccessCount,
+               let destStr = successfulDestURLs.last,
+               let destPath = URL(string: destStr)?.path {
+                indexMovePairs.append((oldPath: fileURL.path, newPath: destPath))
             }
         }
         publicVar.isKeyEventEnabled = StoreIsKeyEventEnabled
@@ -809,6 +837,10 @@ extension ViewController {
             urls = publicVar.selectedUrls()
         }
         guard urls.count != 0 else {return false}
+        
+        fileDB.lock()
+        let curFolder = fileDB.curFolder
+        fileDB.unlock()
         
         let ifHasPermission = requestAppleEventsPermission()
         let isShiftPressed = isShiftKeyPressed()
@@ -839,6 +871,13 @@ extension ViewController {
             publicVar.isKeyEventEnabled=false
             response = alert.runModal()
             publicVar.isKeyEventEnabled=StoreIsKeyEventEnabled
+        }
+
+        // 在文件操作期间抑制文件系统监控触发的刷新，操作完成后主动刷新
+        // Suppress FS watcher refreshes during file operations, refresh explicitly after completion
+        publicVar.isInFileOperation = true
+        defer {
+            publicVar.isInFileOperation = false
         }
 
         if response == .alertFirstButtonReturn {
@@ -883,7 +922,8 @@ extension ViewController {
                 } else {
                     var appleScriptURLs = ""
                     for url in urlsToDelete {
-                        appleScriptURLs += "\"\(url.path)\" as POSIX file, "
+                        let escapedPath = url.path.replacingOccurrences(of: "\"", with: "\\\"")
+                        appleScriptURLs += "\"\(escapedPath)\" as POSIX file, "
                     }
                     
                     // Remove the trailing comma and space
@@ -904,32 +944,35 @@ extension ViewController {
                             // AppleScript 无权限，回退到 NSWorkspace.shared.recycle
                             NSWorkspace.shared.recycle(urlsToDelete, completionHandler: { (newURLs, error) in
                                 if let error = error {
-                                    log("Failed to delete: \(error)")
+                                    log("Failed to delete: \(error)", level: .error)
                                 } else {
                                     log("File moved to trash")
                                 }
                             })
                         } else if let error = error {
-                            log("Failed to delete: \(error)")
+                            log("Failed to delete: \(error)", level: .error)
                         } else {
                             log("File moved to trash")
                         }
                     }
                 }
                 
+                EnhancedIndex.handleFilesDeleted(urlsToDelete.map { $0.path })
+
                 // 文件更改计数
                 // File change count
                 publicVar.fileChangedCount += 1
 
-                // 针对递归模式处理
-                // Handle recursive mode
-                if publicVar.isRecursiveMode {
+                // 手动刷新
+                // Manually refresh
+                var ifRefresh = true
+                if publicVar.isRecursiveMode || curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
                     fileDB.lock()
-                    let ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
                     fileDB.unlock()
-                    if ifRefresh {
-                        scheduledRefresh()
-                    }
+                }
+                if ifRefresh {
+                    scheduledRefresh()
                 }
                 
             } else {
@@ -994,6 +1037,264 @@ extension ViewController {
             return .cancel
         default:
             return .cancel
+        }
+    }
+    
+    func handleRename(urls: [URL]) -> Bool {
+        if urls.isEmpty { return false }
+
+        fileDB.lock()
+        let curFolder = fileDB.curFolder
+        fileDB.unlock()
+        
+        // 创建一个警告对话框
+        // Create an alert dialog
+        let alert = NSAlert()
+        alert.messageText = NSLocalizedString("Rename", comment: "重命名")
+        alert.informativeText = NSLocalizedString("New name for", comment: "请输入新的名称用于") + " \(urls[0].lastPathComponent):"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: NSLocalizedString("OK", comment: "确定"))
+        alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "取消"))
+        // 设置系统通知图标
+        // Set system notification icon
+        alert.icon = NSImage(named: NSImage.infoName)
+        
+        // 添加一个文本输入框到警告对话框中
+        // Add a text input field to the alert dialog
+        let inputTextField = NSTextField(frame: NSRect(x: 0, y: 0, width: 200, height: 24))
+        inputTextField.stringValue = urls[0].lastPathComponent
+        if let textFieldCell = inputTextField.cell as? NSTextFieldCell {
+            textFieldCell.usesSingleLineMode = true
+            textFieldCell.wraps = false
+            textFieldCell.isScrollable = true
+        }
+        alert.accessoryView = inputTextField
+        
+        // 显示对话框
+        // Show dialog
+        let StoreIsKeyEventEnabled = publicVar.isKeyEventEnabled
+        publicVar.isKeyEventEnabled = false
+        DispatchQueue.main.async {
+            // 判断是否是文件夹
+            // Check if it's a folder
+            var isDirectory: ObjCBool = false
+            FileManager.default.fileExists(atPath: urls[0].path, isDirectory: &isDirectory)
+            
+            _ = inputTextField.becomeFirstResponder()
+            if isDirectory.boolValue {
+                // 如果是文件夹，选中全部内容
+                // If it's a folder, select all content
+                inputTextField.selectText(nil)
+            } else {
+                // 如果是文件，选中文件名不包含扩展名的部分
+                // If it's a file, select the filename part without extension
+                let fileName = urls[0].deletingPathExtension().lastPathComponent
+                inputTextField.currentEditor()?.selectedRange = NSRange(location: 0, length: fileName.count)
+            }
+        }
+        let response = alert.runModal()
+        publicVar.isKeyEventEnabled = StoreIsKeyEventEnabled
+
+        // 在文件操作期间抑制文件系统监控触发的刷新，操作完成后主动刷新
+        // Suppress FS watcher refreshes during file operations, refresh explicitly after completion
+        publicVar.isInFileOperation = true
+        defer {
+            publicVar.isInFileOperation = false
+        }
+        
+        // 根据用户的选择处理结果
+        // Process result based on user's choice
+        // OK按钮
+        // OK button
+        if response == .alertFirstButtonReturn {
+            let newBaseName = inputTextField.stringValue
+            
+            if newBaseName != "" {
+
+                // 记录操作到日志
+                // Log operation to log
+                let sourceFiles = urls.map { url -> String in
+                    return url.lastPathComponent
+                }
+                
+                let sourceFilesStr: String
+                if sourceFiles.count > 3 {
+                    sourceFilesStr = sourceFiles[0...2].joined(separator: ", ") + "..."
+                } else {
+                    sourceFilesStr = sourceFiles.joined(separator: ", ")
+                }
+                
+                let operationLog = "[Rename] \(sourceFilesStr) -> \(newBaseName)"
+                globalVar.operationLogs.append(operationLog)
+
+                var allSuccess = true
+                
+                // 第一步：生成最终目标名字列表
+                // Step 1: Generate final target name list
+                var finalNames: [(originalUrl: URL, finalUrl: URL)] = []
+                var nameIndex = 1
+                
+                for originalUrl in urls {
+                    var newName = newBaseName
+                    // 批量重命名
+                    // Batch rename
+                    if urls.count > 1 {
+                        var newUrl: URL
+                        var collision = false
+                        repeat {
+                            // 如果有扩展名，在扩展名前添加序号
+                            // If there's an extension, add index before extension
+                            if let ext = originalUrl.pathExtension.isEmpty ? nil : originalUrl.pathExtension {
+                                let nameWithoutExt = (newBaseName as NSString).deletingPathExtension
+                                newName = "\(nameWithoutExt)_\(nameIndex).\(ext)"
+                            } else {
+                                newName = "\(newBaseName)_\(nameIndex)"
+                            }
+                            newUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                            nameIndex += 1
+                            
+                            // 检查是否存在同名文件，但排除当前待重命名列表中的文件
+                            // Check if file with same name exists, but exclude files in current rename list
+                            if FileManager.default.fileExists(atPath: newUrl.path) &&
+                                 !urls.contains(where: { $0.path.lowercased() == newUrl.path.lowercased() })
+                            {
+                                collision = true
+                                
+                                let alert = NSAlert()
+                                alert.messageText = NSLocalizedString("File Already Exists", comment: "文件已存在")
+                                alert.informativeText = NSLocalizedString("file-exists-continue-batch-rename", comment: "批量重命名的序号与已有文件重名，是否继续?")
+                                alert.alertStyle = .warning
+                                alert.addButton(withTitle: NSLocalizedString("Continue", comment: "继续"))
+                                alert.addButton(withTitle: NSLocalizedString("Cancel", comment: "取消"))
+                                
+                                if alert.runModal() == .alertSecondButtonReturn {
+                                    return false
+                                }
+                            }else{
+                                collision = false
+                            }
+                        } while collision
+                    }else{
+                        // 单个重命名
+                        // Single rename
+                        let newUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                        if FileManager.default.fileExists(atPath: newUrl.path) {
+                            showAlert(message: NSLocalizedString("renaming-conflict", comment: "该名称的文件已存在，请选择其他名称。"))
+                            allSuccess = false
+                            return false
+                        }
+                    }
+                    
+                    let finalUrl = originalUrl.deletingLastPathComponent().appendingPathComponent(newName)
+                    finalNames.append((originalUrl: originalUrl, finalUrl: finalUrl))
+                }
+                
+                // 第二步：将所有文件改成临时文件名
+                // Step 2: Rename all files to temporary names
+                var tempNames: [(tempUrl: URL, finalUrl: URL)] = []
+                for (index, item) in finalNames.enumerated() {
+                    let tempName = "temp_rename_\(UUID().uuidString)"
+                    let tempUrl = item.originalUrl.deletingLastPathComponent().appendingPathComponent(tempName)
+                    
+                    do {
+                        try FileManager.default.moveItem(at: item.originalUrl, to: tempUrl)
+                        tempNames.append((tempUrl: tempUrl, finalUrl: item.finalUrl))
+                    } catch {
+                        // 如果临时重命名失败，回滚之前的临时重命名
+                        // If temporary rename fails, rollback previous temporary renames
+                        for prevTemp in tempNames {
+                            try? FileManager.default.moveItem(at: prevTemp.tempUrl, to: finalNames[tempNames.count].originalUrl)
+                        }
+                        log("Failed to create temp name: \(error)", level: .error)
+                        allSuccess = false
+                        break
+                    }
+                }
+                
+                // 第三步：将临时文件名改成最终文件名
+                // Step 3: Rename temporary files to final names
+                if allSuccess {
+                    for item in tempNames {
+                        do {
+                            // 文件更改计数
+                            // File change count
+                            publicVar.fileChangedCount += 1
+                            
+                            try FileManager.default.moveItem(at: item.tempUrl, to: item.finalUrl)
+                            log("File renamed to \(item.finalUrl.lastPathComponent)")
+                        } catch {
+                            log("Failed to rename file: \(error)", level: .error)
+                            allSuccess = false
+                            // 这里不需要回滚，因为用户可以通过临时文件找回
+                            // No need to rollback here, as user can recover through temporary files
+                            break
+                        }
+                    }
+                }
+                
+                if allSuccess && !finalNames.isEmpty {
+                    EnhancedIndex.handleFilesMoved(finalNames.map { (oldPath: $0.originalUrl.path, newPath: $0.finalUrl.path) })
+                }
+
+                // 手动刷新
+                // Manually refresh
+                var ifRefresh = true
+                if publicVar.isRecursiveMode || curFolder.hasPrefix("file:///VirtualFinderTagsFolder") {
+                    fileDB.lock()
+                    ifRefresh = fileDB.db[SortKeyDir(fileDB.curFolder)]?.files.count ?? 0 <= RESET_VIEW_FILE_NUM_THRESHOLD
+                    fileDB.unlock()
+                    
+                }
+                if ifRefresh {
+                    scheduledRefresh()
+                }
+                
+                return allSuccess
+            }
+        }
+        return false
+    }
+    
+    func applyCutItemsDimEffect() {
+        for window in NSApp.windows {
+            guard let vc = window.contentViewController as? ViewController else { continue }
+            for item in vc.collectionView.visibleItems() {
+                if let item = item as? CustomCollectionViewItem {
+                    item.updateCutDimEffect()
+                }
+            }
+            updateOutlineViewCutDimEffect(vc.outlineView)
+        }
+    }
+    
+    func clearCutItemsDimEffect() {
+        let hadCutItems = !globalVar.cutItemPaths.isEmpty
+        globalVar.cutItemPaths.removeAll()
+        if hadCutItems {
+            for window in NSApp.windows {
+                guard let vc = window.contentViewController as? ViewController else { continue }
+                for item in vc.collectionView.visibleItems() {
+                    if let item = item as? CustomCollectionViewItem {
+                        item.updateCutDimEffect()
+                    }
+                }
+                updateOutlineViewCutDimEffect(vc.outlineView)
+            }
+        }
+    }
+    
+    private func updateOutlineViewCutDimEffect(_ outlineView: CustomOutlineView) {
+        let visibleRange = outlineView.rows(in: outlineView.visibleRect)
+        for row in visibleRange.location..<(visibleRange.location + visibleRange.length) {
+            guard let rowView = outlineView.rowView(atRow: row, makeIfNecessary: false) else { continue }
+            if let treeNode = outlineView.item(atRow: row) as? TreeNode {
+                let isCut = globalVar.cutItemPaths.contains(treeNode.fullPath)
+                for col in 0..<outlineView.numberOfColumns {
+                    if let cellView = rowView.view(atColumn: col) as? NSView {
+                        cellView.alphaValue = isCut ? 0.4 : 1.0
+                    }
+                }
+            }
         }
     }
 }

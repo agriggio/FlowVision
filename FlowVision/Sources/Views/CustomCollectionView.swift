@@ -10,6 +10,43 @@ class CustomCollectionView: NSCollectionView {
 
     private var mouseDownLocation: NSPoint? = nil
     
+    private lazy var folderInfoLabel: NSTextField = {
+        let label = NSTextField(labelWithString: "")
+        label.font = NSFont.systemFont(ofSize: 16, weight: .regular)
+        label.textColor = NSColor.tertiaryLabelColor
+        label.alignment = .center
+        label.lineBreakMode = .byWordWrapping
+        label.maximumNumberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = true
+        return label
+    }()
+    
+    private var folderInfoLabelConstraints: [NSLayoutConstraint] = []
+    
+    private func setupFolderInfoLabelIfNeeded() {
+        guard folderInfoLabel.superview == nil else { return }
+        guard let scrollView = enclosingScrollView,
+              let parentView = scrollView.superview else { return }
+        parentView.addSubview(folderInfoLabel)
+        folderInfoLabelConstraints = [
+            folderInfoLabel.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
+            folderInfoLabel.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor),
+            folderInfoLabel.widthAnchor.constraint(lessThanOrEqualTo: scrollView.widthAnchor, multiplier: 0.8)
+        ]
+        NSLayoutConstraint.activate(folderInfoLabelConstraints)
+    }
+    
+    func showFolderInfo(_ text: String) {
+        setupFolderInfoLabelIfNeeded()
+        folderInfoLabel.stringValue = text
+        folderInfoLabel.isHidden = false
+    }
+    
+    func hideFolderInfo() {
+        folderInfoLabel.isHidden = true
+    }
+    
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         log("CustomCollectionView becomeFirstResponder")
@@ -79,28 +116,119 @@ class CustomCollectionView: NSCollectionView {
                     if !types.contains(.fileURL) {
                         canPasteOrMove=false
                     }
+
+                    let curFolder = getViewController(self)!.fileDB.curFolder
+                    let isVirtualFinderTagsFolder = curFolder.hasPrefix("file:///VirtualFinderTagsFolder")
                     
                     // 弹出菜单
                     // Show context menu
                     let menu = NSMenu(title: "Custom Menu")
                     menu.autoenablesItems = false
                     
-                    menu.addItem(withTitle: NSLocalizedString("Open in Finder", comment: "在Finder中打开"), action: #selector(actOpenInFinder), keyEquivalent: "")
+                    let actionItemOpenInFinder = menu.addItem(withTitle: NSLocalizedString("Open in Finder", comment: "在Finder中打开"), action: #selector(actOpenInFinder), keyEquivalent: "")
+                    actionItemOpenInFinder.isEnabled = !isVirtualFinderTagsFolder
                     
                     menu.addItem(NSMenuItem.separator())
 
                     let actionItemPaste = menu.addItem(withTitle: NSLocalizedString("Paste", comment: "粘贴"), action: #selector(actPaste), keyEquivalent: "v")
-                    actionItemPaste.isEnabled = canPasteOrMove
+                    actionItemPaste.isEnabled = canPasteOrMove && !isVirtualFinderTagsFolder
                     
                     let actionItemMove = menu.addItem(withTitle: NSLocalizedString("Move Here", comment: "移动到此"), action: #selector(actMove), keyEquivalent: "v")
                     actionItemMove.keyEquivalentModifierMask = [.command,.option]
-                    actionItemMove.isEnabled = canPasteOrMove
+                    actionItemMove.isEnabled = canPasteOrMove && !isVirtualFinderTagsFolder
+
+                    menu.addItem(NSMenuItem.separator())
+
+                    let filterMenu = NSMenu()
+                    let filterMenuItem = NSMenuItem(title: NSLocalizedString("Filter by Finder Tag", comment: "按Finder标签筛选"), action: nil, keyEquivalent: "")
+                    filterMenuItem.submenu = filterMenu
+
+                    let currentFilters = getViewController(self)?.publicVar.finderTagFilters ?? []
+
+                    for (i, tag) in FinderTag.all.enumerated() {
+                        // (i + 1 <= 9) ? "\(i + 1)" : ""
+                        let item = filterMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actFilterByFinderTag(_:)), keyEquivalent: "")
+                        item.keyEquivalentModifierMask = [.command, .shift]
+                        item.representedObject = tag.name
+                        if currentFilters.contains(tag.name) {
+                            item.state = .on
+                        }
+                        item.image = tag.dotImage
+                    }
+
+                    filterMenu.addItem(NSMenuItem.separator())
+
+                    let isAndMode = getViewController(self)?.publicVar.isFinderTagFilterModeAnd ?? false
+                    let matchAnyItem = filterMenu.addItem(withTitle: NSLocalizedString("Match Any (OR)", comment: "匹配任一 (OR)"), action: #selector(actSetFinderTagFilterModeOr), keyEquivalent: "")
+                    matchAnyItem.state = isAndMode ? .off : .on
+                    let matchAllItem = filterMenu.addItem(withTitle: NSLocalizedString("Match All (AND)", comment: "匹配全部 (AND)"), action: #selector(actSetFinderTagFilterModeAnd), keyEquivalent: "")
+                    matchAllItem.state = isAndMode ? .on : .off
+
+                    filterMenu.addItem(NSMenuItem.separator())
+
+                    let reverseFilterItem = filterMenu.addItem(withTitle: NSLocalizedString("Reverse Filter", comment: "反转筛选"), action: #selector(actReverseFinderTagFilter), keyEquivalent: "")
+                    reverseFilterItem.state = getViewController(self)?.publicVar.isFinderTagFilterReversed ?? false ? .on : .off
+
+                    filterMenu.addItem(NSMenuItem.separator())
+
+                    let showAllItem = filterMenu.addItem(withTitle: NSLocalizedString("Show All", comment: "显示全部"), action: #selector(actClearFinderTagFilter), keyEquivalent: "")
+                    if currentFilters.isEmpty {
+                        showAllItem.state = .on
+                    }
+
+                    filterMenu.addItem(NSMenuItem.separator())
+                    filterMenu.addItem(withTitle: NSLocalizedString("Learn More...", comment: "了解更多..."), action: #selector(actTagLearnMore), keyEquivalent: "")
+
+                    menu.addItem(filterMenuItem)
+
+                    // 根据评级筛选
+                    let ratingMenu = NSMenu()
+                    let ratingMenuItem = NSMenuItem(title: NSLocalizedString("Filter by Rating", comment: "按评级筛选"), action: nil, keyEquivalent: "")
+                    ratingMenuItem.submenu = ratingMenu
+
+                    let currentRatingFilters = getViewController(self)?.publicVar.ratingFilters ?? []
+
+                    for rating in (1...5).reversed() {
+                        let stars = String(repeating: "★", count: rating) + String(repeating: "☆", count: 5 - rating)
+                        let title = "\(stars)  (\(rating))"
+                        let item = ratingMenu.addItem(withTitle: title, action: #selector(actFilterByRating(_:)), keyEquivalent: "")
+                        item.keyEquivalentModifierMask = [.control, .shift]
+                        item.representedObject = rating
+                        if currentRatingFilters.contains(rating) {
+                            item.state = .on
+                        }
+                    }
+
+                    let noRatingItem = ratingMenu.addItem(withTitle: NSLocalizedString("No Rating", comment: "无评级"), action: #selector(actFilterByRating(_:)), keyEquivalent: "")
+                    noRatingItem.keyEquivalentModifierMask = [.control, .shift]
+                    noRatingItem.representedObject = 0
+                    if currentRatingFilters.contains(0) {
+                        noRatingItem.state = .on
+                    }
+
+                    ratingMenu.addItem(NSMenuItem.separator())
+
+                    let reverseRatingFilterItem = ratingMenu.addItem(withTitle: NSLocalizedString("Reverse Filter", comment: "反转筛选"), action: #selector(actReverseRatingFilter), keyEquivalent: "")
+                    reverseRatingFilterItem.state = getViewController(self)?.publicVar.isRatingFilterReversed ?? false ? .on : .off
+
+                    ratingMenu.addItem(NSMenuItem.separator())
+
+                    let showAllRatingItem = ratingMenu.addItem(withTitle: NSLocalizedString("Show All", comment: "显示全部"), action: #selector(actClearRatingFilter), keyEquivalent: "")
+                    if currentRatingFilters.isEmpty {
+                        showAllRatingItem.state = .on
+                    }
+
+                    ratingMenu.addItem(NSMenuItem.separator())
+                    ratingMenu.addItem(withTitle: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(actRatingReadme), keyEquivalent: "")
+
+                    menu.addItem(ratingMenuItem)
 
                     menu.addItem(NSMenuItem.separator())
                     
                     // let actionItemCopyPath = menu.addItem(withTitle: NSLocalizedString("Copy Path", comment: "复制路径"), action: #selector(actCopyPath), keyEquivalent: "")
                     
                     let actionItemOpenInTerminal = menu.addItem(withTitle: NSLocalizedString("Open in Terminal", comment: "在终端中打开"), action: #selector(actOpenInTerminal), keyEquivalent: "")
+                    actionItemOpenInTerminal.isEnabled = !isVirtualFinderTagsFolder
                     
                     menu.addItem(NSMenuItem.separator())
             
@@ -109,6 +237,7 @@ class CustomCollectionView: NSCollectionView {
                     let newMenu = NSMenu()
                     let newMenuItem = NSMenuItem(title: NSLocalizedString("New", comment: "新建"), action: nil, keyEquivalent: "")
                     newMenuItem.submenu = newMenu
+                    newMenuItem.isEnabled = !isVirtualFinderTagsFolder
                     
                     // 添加新建文件夹选项
                     // Add new folder option
@@ -126,31 +255,6 @@ class CustomCollectionView: NSCollectionView {
                                                         keyEquivalent: "")
                     
                     menu.addItem(newMenuItem)
-
-                    menu.addItem(NSMenuItem.separator())
-
-                    let filterMenu = NSMenu()
-                    let filterMenuItem = NSMenuItem(title: NSLocalizedString("Filter by Finder Tag", comment: "按Finder标签筛选"), action: nil, keyEquivalent: "")
-                    filterMenuItem.submenu = filterMenu
-
-                    let currentFilter = getViewController(self)?.publicVar.finderTagFilter
-
-                    for tag in FinderTag.all {
-                        let item = filterMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actFilterByFinderTag(_:)), keyEquivalent: "")
-                        item.representedObject = tag.name
-                        if currentFilter == tag.name {
-                            item.state = .on
-                        }
-                        item.image = tag.dotImage
-                    }
-
-                    filterMenu.addItem(NSMenuItem.separator())
-                    let showAllItem = filterMenu.addItem(withTitle: NSLocalizedString("Show All", comment: "显示全部"), action: #selector(actClearFinderTagFilter), keyEquivalent: "")
-                    if currentFilter == nil {
-                        showAllItem.state = .on
-                    }
-
-                    menu.addItem(filterMenuItem)
 
                     menu.addItem(NSMenuItem.separator())
 
@@ -219,6 +323,46 @@ class CustomCollectionView: NSCollectionView {
     }
 
     @objc func actClearFinderTagFilter() {
+        getViewController(self)?.publicVar.isFinderTagFilterReversed = false
+        getViewController(self)?.publicVar.isFinderTagFilterModeAnd = false
+        getViewController(self)?.publicVar.finderTagFilters.removeAll()
         getViewController(self)?.toggleFinderTagFilter(nil)
+    }
+
+    @objc func actReverseFinderTagFilter() {
+        getViewController(self)?.toggleFinderTagFilterReversed()
+    }
+
+    @objc func actSetFinderTagFilterModeAnd() {
+        getViewController(self)?.publicVar.isFinderTagFilterModeAnd = true
+        getViewController(self)?.refreshCollectionView(needLoadThumbPriority: true)
+    }
+
+    @objc func actSetFinderTagFilterModeOr() {
+        getViewController(self)?.publicVar.isFinderTagFilterModeAnd = false
+        getViewController(self)?.refreshCollectionView(needLoadThumbPriority: true)
+    }
+
+    @objc func actTagLearnMore() {
+        getViewController(self)?.handleTagLearnMore()
+    }
+
+    @objc func actFilterByRating(_ sender: NSMenuItem) {
+        guard let rating = sender.representedObject as? Int else { return }
+        getViewController(self)?.toggleRatingFilter(rating)
+    }
+
+    @objc func actClearRatingFilter() {
+        getViewController(self)?.publicVar.isRatingFilterReversed = false
+        getViewController(self)?.publicVar.ratingFilters.removeAll()
+        getViewController(self)?.toggleRatingFilter(nil)
+    }
+
+    @objc func actReverseRatingFilter() {
+        getViewController(self)?.toggleRatingFilterReversed()
+    }
+
+    @objc func actRatingReadme() {
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("rating-info", comment: "对于评级的说明..."))
     }
 }

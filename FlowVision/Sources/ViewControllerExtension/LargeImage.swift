@@ -210,6 +210,28 @@ extension ViewController {
             // Cancel OCR
             largeImageView.unSetOcr()
             
+            // 替身文件：解析后按目标类型分发处理
+            // Finder alias: resolve and dispatch based on target type
+            if let values = try? url.resourceValues(forKeys: [.isAliasFileKey, .isSymbolicLinkKey]),
+               values.isAliasFile == true,
+               let resolved = try? URL(resolvingAliasFileAt: url) {
+                let resolvedAbsPath = resolved.absoluteString
+                if resolved.hasDirectoryPath {
+                    switchDirByDirection(direction: .zero, dest: resolvedAbsPath, stackDeep: 0)
+                } else if globalVar.HandledImageAndRawExtensions.contains(resolved.pathExtension.lowercased()) ||
+                    (globalVar.useInternalPlayer && globalVar.HandledNativeSupportedVideoExtensions.contains(resolved.pathExtension.lowercased())) {
+                    if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+                        globalVar.isLaunchFromFile = true
+                        if let windowController = appDelegate.createNewWindow(resolvedAbsPath) {
+                            appDelegate.openImageInTargetWindow(resolvedAbsPath, windowController: windowController)
+                        }
+                    }
+                } else {
+                    NSWorkspace.shared.open(resolved)
+                }
+                return
+            }
+            
             if(url.hasDirectoryPath){
                 switchDirByDirection(direction: .zero, dest: item.file.path, stackDeep: 0)
             }
@@ -421,11 +443,11 @@ extension ViewController {
         let imageCount = fileDB.db[SortKeyDir(folderPath)]?.imageCount ?? 0
         let videoCount = fileDB.db[SortKeyDir(folderPath)]?.videoCount ?? 0
         let rangeCount = globalVar.useInternalPlayer ? imageCount+videoCount : imageCount
+        var indexInfo = ""
         if rangeCount != 0 {
             if let file = fileDB.db[SortKeyDir(folderPath)]?.files[SortKeyFile(file.path, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)] {
-                // fullTitle += " | " + String(format: "(%d/%d)",idInImage+1,imageCount)
                 let idInRange = globalVar.useInternalPlayer ? file.idInImageAndVideo : file.idInImage
-                fullTitle += " " + String(format: "(%d/%d)",idInRange+1,rangeCount)
+                indexInfo = String(format: "(%d/%d)",idInRange+1,rangeCount)
                 publicVar.lastLargeImageIdInImage=idInRange
             }
         }
@@ -434,6 +456,7 @@ extension ViewController {
         let shortTitle = (file.path as NSString).lastPathComponent.removingPercentEncoding!
         view.window?.title = shortTitle
         publicVar.toolbarTitle = fullTitle
+        publicVar.titleStatisticInfo = indexInfo
         // publicVar.toolbarTitle = shortTitle
         if let windowController = view.window?.windowController as? WindowController {
             windowController.updateToolbarSync()
@@ -664,6 +687,7 @@ extension ViewController {
             let url = URL(string: publicVar.openFromFinderPath)!
             file=FileModel(path: publicVar.openFromFinderPath, ver: 0)
             file.imageInfo=getImageInfo(url: url, needMetadata: true)
+            file.finderTags = (try? url.resourceValues(forKeys: [.tagNamesKey]))?.tagNames ?? []
             file.originalSize=file.imageInfo?.size
             if !justChangeLargeImageViewFile {
                 // 获取缩略图（以加快响应）
@@ -710,6 +734,7 @@ extension ViewController {
         
         largeImageView.file=file
         largeImageView.refreshFinderTagDots()
+        largeImageView.refreshRatingStars()
 
         if justChangeLargeImageViewFile {return}
   

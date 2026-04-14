@@ -23,7 +23,6 @@ class LargeImageView: NSView {
     var playcontrolTimer: DispatchSourceTimer?
     var videoOrderId: Int = 0
     var pausedBySeek = false
-    var lastVolumeForPauseRef: Float?
     var restorePlayPosition: CMTime?
     var restorePlayURL: URL?
     var isVideoMetadataUpdated: Bool = false
@@ -32,7 +31,9 @@ class LargeImageView: NSView {
     var videoEndObserver: NSObjectProtocol?
     var lastActionTriggerdReload: String?
     var isKeyWindowWhenMouseDown: Bool = true
+    var videoPreventDoubleClickOpenPauseFlag: Bool = false
     
+    private var volumeObservation: NSKeyValueObservation?
     private var blackOverlayView: NSView?
     
     var exifTextView: ExifTextView!
@@ -40,6 +41,7 @@ class LargeImageView: NSView {
     var infoView: InfoView!
     var unsupportedVideoOverlay: NSView!
     var finderTagDotsView: NSView?
+    var ratingStarsView: NSView?
 
     // MARK: - 图片编辑相关属性
     // MARK: - Image editing related properties
@@ -102,12 +104,21 @@ class LargeImageView: NSView {
 
         videoView = LargeAVPlayerView(frame: self.bounds)
         queuePlayer = AVQueuePlayer()
+        queuePlayer?.volume = globalVar.videoVolume
         videoView.player = queuePlayer
         videoView.controlsStyle = .none
         videoView.showsFullScreenToggleButton = false
         videoView.videoGravity = .resizeAspect
         videoView.isHidden = true
         self.addSubview(videoView)
+        
+        volumeObservation = queuePlayer?.observe(\.volume, options: [.new, .old]) { [weak self] _, change in
+            guard let self = self,
+                  let newVal = change.newValue,
+                  let oldVal = change.oldValue,
+                  newVal != oldVal else { return }
+            self.saveVolumeChange()
+        }
 //        if #available(macOS 13.0, *) {
 //            videoView.allowsVideoFrameAnalysis = false
 //        }
@@ -185,6 +196,7 @@ class LargeImageView: NSView {
         }
         
         refreshFinderTagDots()
+        refreshRatingStars()
 
         // 创建边缘切换箭头视图
         // Create edge switching arrow views
@@ -209,15 +221,34 @@ class LargeImageView: NSView {
     func refreshFinderTagDots() {
         finderTagDotsView?.removeFromSuperview()
         finderTagDotsView = nil
+        guard globalVar.largeImageViewShowTagsAndRating else { return }
 
         let tags = file.finderTags.compactMap { FinderTag.byName($0) }
         guard !tags.isEmpty else { return }
 
+        let colorTags = tags.filter { $0.isSystemColorLabel }
+        let textTags = tags.filter { !$0.isSystemColorLabel }
+        let sortedTags = colorTags + textTags
+
         let dotSize: CGFloat = 10
         let spacing: CGFloat = 3
         let padding: CGFloat = 6
-        let totalDotsWidth = CGFloat(tags.count) * dotSize + CGFloat(tags.count - 1) * spacing
-        let pillWidth = totalDotsWidth + padding * 2
+        let fontSize: CGFloat = 11
+        let textPaddingH: CGFloat = 6
+        let textFont = NSFont.systemFont(ofSize: fontSize)
+
+        var contentWidth: CGFloat = 0
+        for (i, tag) in sortedTags.enumerated() {
+            if i > 0 { contentWidth += spacing }
+            if tag.isSystemColorLabel {
+                contentWidth += dotSize
+            } else {
+                let textWidth = (tag.name as NSString).size(withAttributes: [.font: textFont]).width
+                contentWidth += ceil(textWidth) + textPaddingH * 2
+            }
+        }
+
+        let pillWidth = contentWidth + padding * 2
         let pillHeight = dotSize + padding * 2
 
         let container = NSView()
@@ -234,15 +265,109 @@ class LargeImageView: NSView {
             container.heightAnchor.constraint(equalToConstant: pillHeight),
         ])
 
-        for (i, tag) in tags.enumerated() {
-            let dot = NSView(frame: NSRect(x: padding + CGFloat(i) * (dotSize + spacing), y: padding, width: dotSize, height: dotSize))
-            dot.wantsLayer = true
-            dot.layer?.backgroundColor = tag.color.cgColor
-            dot.layer?.cornerRadius = dotSize / 2
-            container.addSubview(dot)
+        var xOffset: CGFloat = padding
+        for tag in sortedTags {
+            if tag.isSystemColorLabel {
+                let dot = NSView(frame: NSRect(x: xOffset, y: padding, width: dotSize, height: dotSize))
+                dot.wantsLayer = true
+                dot.layer?.backgroundColor = tag.color.cgColor
+                dot.layer?.cornerRadius = dotSize / 2
+                let isLight = (tag.color.usingColorSpace(.genericGray)?.whiteComponent ?? 0) > 0.85
+                dot.layer?.borderColor = (isLight ? NSColor.black : NSColor.white).cgColor
+                dot.layer?.borderWidth = 1
+                container.addSubview(dot)
+                xOffset += dotSize + spacing
+            } else {
+                let textWidth = (tag.name as NSString).size(withAttributes: [.font: textFont]).width
+                let labelWidth = ceil(textWidth) + textPaddingH * 2
+                let labelHeight = dotSize + 4
+                let label = NSTextField(labelWithString: tag.name)
+                label.font = textFont
+                label.textColor = .black
+                label.alignment = .center
+                label.wantsLayer = true
+                label.layer?.borderColor = NSColor.gray.cgColor
+                label.layer?.borderWidth = 0.5
+                label.layer?.cornerRadius = 3
+                label.layer?.backgroundColor = tag.color.withAlphaComponent(0.7).cgColor
+                label.frame = NSRect(x: xOffset, y: padding - 2, width: labelWidth, height: labelHeight)
+                container.addSubview(label)
+                xOffset += labelWidth + spacing
+            }
         }
 
         finderTagDotsView = container
+    }
+
+    /// 根据评级返回对应颜色（1–5 星：灰 → 银 → 橙 → 黄 → 金）
+    private static func color(forRating rating: Int) -> NSColor {
+        switch rating {
+        case 1: return NSColor(calibratedWhite: 0.5, alpha: 1)
+        case 2: return NSColor(calibratedWhite: 0.7, alpha: 1)
+        case 3: return NSColor.systemOrange
+        case 4: return NSColor(calibratedRed: 1, green: 0.88, blue: 0.2, alpha: 1)
+        case 5: return NSColor(calibratedRed: 1, green: 0.68, blue: 0, alpha: 1)
+        default: return NSColor.systemGray
+        }
+    }
+
+    func refreshRatingStars() {
+        ratingStarsView?.removeFromSuperview()
+        ratingStarsView = nil
+        guard globalVar.largeImageViewShowTagsAndRating else { return }
+
+        guard let rating = file.imageInfo?.rating, rating >= 1, rating <= 5 else { return }
+
+        let starSize: CGFloat = 16
+        let spacing: CGFloat = 2
+        let padding: CGFloat = 6
+        let starCount = rating
+        let color = Self.color(forRating: rating)
+
+        let contentWidth = CGFloat(starCount) * starSize + CGFloat(starCount - 1) * spacing
+        let pillWidth = contentWidth + padding * 2
+        let pillHeight = starSize + padding * 2
+
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.4).cgColor
+        container.layer?.cornerRadius = pillHeight / 2
+        container.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(container)
+
+        NSLayoutConstraint.activate([
+            container.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 15),
+            container.topAnchor.constraint(equalTo: self.topAnchor, constant: 15),
+            container.widthAnchor.constraint(equalToConstant: pillWidth),
+            container.heightAnchor.constraint(equalToConstant: pillHeight),
+        ])
+
+        let config = NSImage.SymbolConfiguration(pointSize: starSize - 2, weight: .medium, scale: .medium)
+        let fillImage = NSImage(systemSymbolName: "star.fill", accessibilityDescription: "Star")?.withSymbolConfiguration(config)
+        fillImage?.isTemplate = true
+        let outlineImage = NSImage(systemSymbolName: "star", accessibilityDescription: "Star outline")?.withSymbolConfiguration(config)
+        outlineImage?.isTemplate = true
+
+        for i in 0..<starCount {
+            let starFrame = NSRect(x: padding + CGFloat(i) * (starSize + spacing), y: padding + 1, width: starSize, height: starSize)
+            let starContainer = NSView(frame: starFrame)
+
+            let fillView = NSImageView(frame: starContainer.bounds)
+            fillView.image = fillImage
+            fillView.contentTintColor = color
+            fillView.imageScaling = .scaleProportionallyDown
+
+            let outlineView = NSImageView(frame: starContainer.bounds)
+            outlineView.image = outlineImage
+            outlineView.contentTintColor = .white
+            outlineView.imageScaling = .scaleProportionallyDown
+
+            starContainer.addSubview(fillView)
+            starContainer.addSubview(outlineView)
+            container.addSubview(starContainer)
+        }
+
+        ratingStarsView = container
     }
 
     // MARK: - 边缘切换箭头视图
@@ -970,6 +1095,12 @@ class LargeImageView: NSView {
     func decreaseVolume() {
         adjustVolume(by: -0.1)
     }
+
+    func saveVolumeChange() {
+        guard let player = queuePlayer else { return }
+        globalVar.videoVolume = player.volume
+        UserDefaults.standard.set(globalVar.videoVolume, forKey: "videoVolume")
+    }
     
     func enableBlackBg() {
         if let effectView = getViewController(self)?.largeImageBgEffectView,
@@ -1196,7 +1327,7 @@ class LargeImageView: NSView {
         getViewController(self)!.publicVar.zoomLock = ratio
         
         if isShowPrompt {
-            let text = String(Int(ratio*100))
+            let text = String(Int((ratio*100).rounded()))
             ratioView.showInfo(text: NSLocalizedString("Zoom", comment: "缩放")+": "+text+"%")
         }
     }
@@ -1284,44 +1415,6 @@ class LargeImageView: NSView {
         
         isKeyWindowWhenMouseDown = self.window?.isKeyWindow ?? true
         
-        // 通过音量记录来标识是否完整点击事件，而且避免点击音量条时触发暂停
-        // Use volume record to identify complete click event and avoid triggering pause when clicking volume bar
-        if !(getViewController(self)!.publicVar.isRightMouseDown),
-           file.type == .video,
-           let player = queuePlayer {
-            lastVolumeForPauseRef = player.volume
-        }
-
-        // 检测点击左侧、右侧区域来切换图像
-        // Detect clicks on left/right areas to switch images
-        if globalVar.clickEdgeToSwitchImage && !(getViewController(self)!.publicVar.isRightMouseDown) {
-            let clickLocation = self.convert(event.locationInWindow, from: nil)
-            let viewWidth = self.bounds.width
-            // 先按百分比计算
-            var leftThreshold: CGFloat = viewWidth * 0.15
-            var rightThreshold: CGFloat = viewWidth * 0.85
-            
-            // 限制最小最大阈值
-            leftThreshold = min(max(leftThreshold, 100), 200)
-            rightThreshold = max(min(rightThreshold, viewWidth - 100), viewWidth - 200)
-            
-            if clickLocation.x <= leftThreshold {
-                // 点击左侧，切换到上一张图像
-                // Click left side, switch to previous image
-                if leftArrowImageView?.isHidden == false {
-                    getViewController(self)?.previousLargeImage()
-                    return
-                }
-            } else if clickLocation.x >= rightThreshold {
-                // 点击右侧，切换到下一张图像
-                // Click right side, switch to next image
-                if rightArrowImageView?.isHidden == false {
-                    getViewController(self)?.nextLargeImage()
-                    return
-                }
-            }
-        }
-        
         // 检测双击
         // Detect double click
         if !(getViewController(self)!.publicVar.isRightMouseDown) {
@@ -1330,7 +1423,6 @@ class LargeImageView: NSView {
             if currentTime - lastClickTime < NSEvent.doubleClickInterval,
                distanceBetweenPoints(lastClickLocation, currentLocation) < positionThreshold {
                 getViewController(self)?.closeLargeImage(0)
-                lastVolumeForPauseRef = nil
             }
             lastClickTime = currentTime
             lastClickLocation = currentLocation
@@ -1392,6 +1484,11 @@ class LargeImageView: NSView {
         longPressZoomTimer = nil
         wheelZoomRegenTimer?.invalidate()
         wheelZoomRegenTimer = nil
+
+        if videoPreventDoubleClickOpenPauseFlag {
+            videoPreventDoubleClickOpenPauseFlag = false
+            return
+        }
         
         if hasZoomedByWheel {
             getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false)
@@ -1406,12 +1503,37 @@ class LargeImageView: NSView {
         // 暂停/恢复视频
         // Pause/resume video
         if !(getViewController(self)!.publicVar.isRightMouseDown) && isKeyWindowWhenMouseDown {
-            let currentLocation = event.locationInWindow
-            if distanceBetweenPoints(lastClickLocation, currentLocation) < positionThreshold {
-                if file.type == .video,let player = queuePlayer,
-                   lastVolumeForPauseRef == player.volume {
-                    pauseOrResumeVideo()
-                    lastVolumeForPauseRef = nil
+            if file.type == .video {
+                pauseOrResumeVideo()
+            }
+        }
+
+        // 检测点击左侧、右侧区域来切换图像
+        // Detect clicks on left/right areas to switch images
+        if globalVar.clickEdgeToSwitchImage && !(getViewController(self)!.publicVar.isRightMouseDown) {
+            let clickLocation = self.convert(event.locationInWindow, from: nil)
+            let viewWidth = self.bounds.width
+            // 先按百分比计算
+            var leftThreshold: CGFloat = viewWidth * 0.15
+            var rightThreshold: CGFloat = viewWidth * 0.85
+            
+            // 限制最小最大阈值
+            leftThreshold = min(max(leftThreshold, 100), 200)
+            rightThreshold = max(min(rightThreshold, viewWidth - 100), viewWidth - 200)
+            
+            if clickLocation.x <= leftThreshold {
+                // 点击左侧，切换到上一张图像
+                // Click left side, switch to previous image
+                if leftArrowImageView?.isHidden == false {
+                    getViewController(self)?.previousLargeImage()
+                    return
+                }
+            } else if clickLocation.x >= rightThreshold {
+                // 点击右侧，切换到下一张图像
+                // Click right side, switch to next image
+                if rightArrowImageView?.isHidden == false {
+                    getViewController(self)?.nextLargeImage()
+                    return
                 }
             }
         }
@@ -1517,8 +1639,8 @@ class LargeImageView: NSView {
     }
 
     override func rightMouseUp(with event: NSEvent) {
-        getViewController(self)!.publicVar.isRightMouseDown = false
         mouseUp(with: event)
+        getViewController(self)!.publicVar.isRightMouseDown = false
         
         if !doNotPopRightMenu && event.locationInWindow.y < getViewController(self)!.mainScrollView.bounds.height {
             // 弹出菜单
@@ -1561,6 +1683,96 @@ class LargeImageView: NSView {
             let actionItemShare = menu.addItem(withTitle: NSLocalizedString("Share...", comment: "共享..."), action: #selector(actShare(_:)), keyEquivalent: "")
             
             menu.addItem(NSMenuItem.separator())
+
+            let currentTags = file.finderTags
+            let allTags = FinderTag.all
+            let activeTagNames = Set(allTags.filter { currentTags.contains($0.name) }.map { $0.name })
+
+            let finderTagMenu = NSMenu()
+            let finderTagTitle = NSLocalizedString("Finder Tags", comment: "Finder标签")
+            let finderTagMenuItem = NSMenuItem(title: finderTagTitle, action: nil, keyEquivalent: "")
+            finderTagMenuItem.submenu = finderTagMenu
+
+            for (i, tag) in allTags.enumerated() {
+                let item = finderTagMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actToggleFinderTag(_:)), keyEquivalent: (i + 1 <= 9) ? "\(i + 1)" : "")
+                item.keyEquivalentModifierMask = [.command]
+                item.representedObject = tag.name
+                if activeTagNames.contains(tag.name) {
+                    item.state = .on
+                }
+                item.image = tag.dotImage
+            }
+
+            finderTagMenu.addItem(NSMenuItem.separator())
+            finderTagMenu.addItem(withTitle: NSLocalizedString("Remove All Tags", comment: "移除所有标签"), action: #selector(actRemoveAllFinderTags), keyEquivalent: "")
+
+            finderTagMenu.addItem(NSMenuItem.separator())
+            finderTagMenu.addItem(withTitle: NSLocalizedString("Learn More...", comment: "了解更多..."), action: #selector(actTagLearnMore), keyEquivalent: "")
+
+            let colorTags = allTags//.filter { $0.colorIndex != nil && $0.colorIndex != 0 }
+            if !colorTags.isEmpty {
+                let dotsItem = NSMenuItem()
+                let dotsView = FinderTagDotsView(tags: colorTags, activeTags: activeTagNames) { [weak self, weak menu] tagName in
+                    guard let self = self, let menu = menu else { return }
+                    getViewController(self)?.handleToggleFinderTag(tagName)
+                    menu.cancelTracking()
+                }
+                dotsView.onHoverChanged = { [weak finderTagMenuItem] index in
+                    guard let finderTagMenuItem = finderTagMenuItem else { return }
+                    if index >= 0 && index < colorTags.count {
+                        let tag = colorTags[index]
+                        if activeTagNames.contains(tag.name) {
+                            finderTagMenuItem.title = NSLocalizedString("Remove", comment: "移除") + "\"\(tag.name)\""
+                        } else {
+                            finderTagMenuItem.title = NSLocalizedString("Add", comment: "添加") + "\"\(tag.name)\""
+                        }
+                        let attrTitle = NSAttributedString(
+                            string: finderTagMenuItem.title,
+                            attributes: [.foregroundColor: NSColor.secondaryLabelColor]
+                        )
+                        finderTagMenuItem.attributedTitle = attrTitle
+                    } else {
+                        finderTagMenuItem.attributedTitle = nil
+                        finderTagMenuItem.title = finderTagTitle
+                    }
+                }
+                dotsItem.view = dotsView
+                menu.addItem(dotsItem)
+            }
+
+            menu.addItem(finderTagMenuItem)
+
+            let rateSubMenu = NSMenu(title: NSLocalizedString("Rating", comment: "评级"))
+            let rateMenuItem = NSMenuItem(title: NSLocalizedString("Rating", comment: "评级"), action: nil, keyEquivalent: "")
+            rateMenuItem.submenu = rateSubMenu
+            rateMenuItem.isEnabled = file.type == .image
+
+            for rating in (1...5).reversed() {
+                let stars = String(repeating: "★", count: rating) + String(repeating: "☆", count: 5 - rating)
+                let title = "\(stars)  (\(rating))"
+                let item = NSMenuItem(title: title, action: #selector(actRate(_:)), keyEquivalent: "\(rating)")
+                item.keyEquivalentModifierMask = [.control]
+                item.tag = rating
+                item.target = self
+                rateSubMenu.addItem(item)
+            }
+
+            let clearTitle = NSLocalizedString("No Rating", comment: "无评级")
+            let clearItem = NSMenuItem(title: clearTitle, action: #selector(actRate(_:)), keyEquivalent: "0")
+            clearItem.keyEquivalentModifierMask = [.control]
+            clearItem.tag = 0
+            clearItem.target = self
+            rateSubMenu.addItem(clearItem)
+
+            rateSubMenu.addItem(NSMenuItem.separator())
+
+            let rateReadmeItem = NSMenuItem(title: NSLocalizedString("Readme...", comment: "说明..."), action: #selector(actRateReadmeAction), keyEquivalent: "")
+            rateReadmeItem.target = self
+            rateSubMenu.addItem(rateReadmeItem)
+
+            menu.addItem(rateMenuItem)
+
+            menu.addItem(NSMenuItem.separator())
                         
             let actionItemCopyToDownload = menu.addItem(withTitle: NSLocalizedString("copy-to-download", comment: "复制到\"下载\"文件夹"), action: #selector(actCopyToDownload), keyEquivalent: "n")
             actionItemCopyToDownload.keyEquivalentModifierMask = []
@@ -1585,11 +1797,11 @@ class LargeImageView: NSView {
                 let actionItemQRCode = menu.addItem(withTitle: NSLocalizedString("recognize-QRCode", comment: "识别二维码"), action: #selector(actQRCode), keyEquivalent: "p")
                 actionItemQRCode.keyEquivalentModifierMask = []
             } else if file.type == .video {
-                let actionItemRememberPosition = menu.addItem(withTitle: NSLocalizedString("Remember Position", comment: "（视频）记忆位置"), action: #selector(actRememberPlayPosition), keyEquivalent: "k")
+                let actionItemRememberPosition = menu.addItem(withTitle: NSLocalizedString("Remember Position", comment: "（视频）记忆位置"), action: #selector(actRememberPlayPosition), keyEquivalent: "j")
                 actionItemRememberPosition.keyEquivalentModifierMask = []
                 actionItemRememberPosition.state = globalVar.videoPlayRememberPosition ? .on : .off
 
-                let actionItemABPlay = menu.addItem(withTitle: NSLocalizedString("A-B Loop", comment: "（视频）A-B循环"), action: #selector(actABPlay), keyEquivalent: "l")
+                let actionItemABPlay = menu.addItem(withTitle: NSLocalizedString("A-B Loop", comment: "（视频）A-B循环"), action: #selector(actABPlay), keyEquivalent: "k")
                 actionItemABPlay.keyEquivalentModifierMask = []
                 if let positionA = abPlayPositionA?.seconds,
                        let positionB = abPlayPositionB?.seconds,
@@ -1599,32 +1811,10 @@ class LargeImageView: NSView {
                     actionItemABPlay.state = .off
                 }
                 
-                let actionItemSequentialPlay = menu.addItem(withTitle: NSLocalizedString("Sequential Playback", comment: "（视频）顺序播放"), action: #selector(actSequentialPlay), keyEquivalent: "")
+                let actionItemSequentialPlay = menu.addItem(withTitle: NSLocalizedString("Sequential Playback", comment: "（视频）顺序播放"), action: #selector(actSequentialPlay), keyEquivalent: "l")
+                actionItemSequentialPlay.keyEquivalentModifierMask = []
                 actionItemSequentialPlay.state = globalVar.videoPlaySequentialPlay ? .on : .off
             }
-
-            menu.addItem(NSMenuItem.separator())
-
-            let finderTagMenu = NSMenu()
-            let finderTagMenuItem = NSMenuItem(title: NSLocalizedString("Finder Tags", comment: "Finder标签"), action: nil, keyEquivalent: "")
-            finderTagMenuItem.submenu = finderTagMenu
-
-            let currentTags = file.finderTags
-
-            for (i, tag) in FinderTag.all.enumerated() {
-                let item = finderTagMenu.addItem(withTitle: NSLocalizedString(tag.name, comment: ""), action: #selector(actToggleFinderTag(_:)), keyEquivalent: "\(i + 1)")
-                item.keyEquivalentModifierMask = [.command]
-                item.representedObject = tag.name
-                if currentTags.contains(tag.name) {
-                    item.state = .on
-                }
-                item.image = tag.dotImage
-            }
-
-            finderTagMenu.addItem(NSMenuItem.separator())
-            finderTagMenu.addItem(withTitle: NSLocalizedString("Remove All Tags", comment: "移除所有标签"), action: #selector(actRemoveAllFinderTags), keyEquivalent: "")
-
-            menu.addItem(finderTagMenuItem)
 
             menu.addItem(NSMenuItem.separator())
 
@@ -1791,7 +1981,7 @@ class LargeImageView: NSView {
         NSWorkspace.shared.selectFile(file.path.replacingOccurrences(of: "file://", with: "").removingPercentEncoding!, inFileViewerRootedAtPath: folderPath)
     }
     @objc func actRename() {
-        renameAlert(urls: [URL(string: file.path)!]);
+        getViewController(self)?.handleRename(urls: [URL(string: file.path)!]);
     }
     
     @objc func actCopy() {
@@ -1835,8 +2025,21 @@ class LargeImageView: NSView {
     @objc func actRemoveAllFinderTags() {
         guard let url = URL(string: file.path) else { return }
         FinderTagHelper.removeAllTags(from: [url])
-        file.finderTags = []
-        getViewController(self)?.refreshFinderTagsForVisibleItems()
+        getViewController(self)?.refreshFinderTagsForVisibleItems(urls: [url])
+    }
+
+    @objc func actTagLearnMore() {
+        getViewController(self)?.handleTagLearnMore()
+    }
+
+    @objc func actRate(_ sender: NSMenuItem) {
+        let rating = sender.tag
+        getViewController(self)?.handleRating(rating: rating)
+        refreshRatingStars()
+    }
+
+    @objc func actRateReadmeAction() {
+        showInformationLong(title: NSLocalizedString("Info", comment: "说明"), message: NSLocalizedString("rating-info", comment: "对于评级的说明..."))
     }
 
     @objc func actRefresh() {
@@ -1907,7 +2110,7 @@ class LargeImageView: NSView {
         if #available(macOS 13.0, *) {
 
             guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-                log("Failed to create CGImage from NSImage")
+                log("Failed to create CGImage from NSImage", level: .warn)
                 return
             }
             

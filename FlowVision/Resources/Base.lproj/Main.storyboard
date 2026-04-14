@@ -690,6 +690,13 @@ Gw
                                                 <action selector="customLayoutStyle:" target="Voe-Tx-rLC" id="Ehw-fZ-DPS"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem isSeparatorItem="YES" id="hHG-It-Z2Z"/>
+                                        <menuItem title="Show Finder Tags and Ratings" id="pB9-hf-avc">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="toggleShowFinderTagsAndRating:" target="Voe-Tx-rLC" id="5n0-hV-KdC"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="2Mq-tp-wyX"/>
                                         <menuItem title="Lock Rotation" id="VCB-ff-DEq">
                                             <modifierMask key="keyEquivalentModifierMask"/>
@@ -811,22 +818,26 @@ Gw
                                             </connections>
                                         </menuItem>
                                         <menuItem isSeparatorItem="YES" id="RXp-tl-oug"/>
-                                        <menuItem title="Justified View" keyEquivalent="1" id="rIE-So-qGu">
+                                        <menuItem title="Justified View" id="rIE-So-qGu">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
                                                 <action selector="switchToJustifiedView:" target="Voe-Tx-rLC" id="CIx-MD-oRV"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Waterfall View" keyEquivalent="2" id="5Wy-TF-lsK">
+                                        <menuItem title="Waterfall View" id="5Wy-TF-lsK">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
                                                 <action selector="switchToWaterfallView:" target="Voe-Tx-rLC" id="uH8-jM-S3p"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Grid View" keyEquivalent="3" id="SAw-E9-7Mm">
+                                        <menuItem title="Grid View" id="SAw-E9-7Mm">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
                                                 <action selector="switchToGridView:" target="Voe-Tx-rLC" id="REh-gr-8sX"/>
                                             </connections>
                                         </menuItem>
-                                        <menuItem title="Detail View" hidden="YES" keyEquivalent="4" id="aHz-iD-6dU">
+                                        <menuItem title="Detail View" hidden="YES" id="aHz-iD-6dU">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
                                             <connections>
                                                 <action selector="switchToDetailView:" target="Voe-Tx-rLC" id="zaN-HG-aSJ"/>
                                             </connections>
@@ -945,6 +956,7 @@ Gw
                         <outlet property="onTopMenuItem" destination="aEU-QL-iYf" id="XOy-Dx-Aw4"/>
                         <outlet property="optimizeWindowMenuItem" destination="tmG-gn-Pce" id="iuh-K8-8iB"/>
                         <outlet property="reopenClosedTabsMenuItem" destination="zBc-1w-QcQ" id="Xxd-rc-TBq"/>
+                        <outlet property="showFinderTagsAndRatingMenuItem" destination="pB9-hf-avc" id="Nr9-Wg-8fN"/>
                         <outlet property="switchToActualSizeMenuItem" destination="pzo-yf-TTx" id="DN8-BG-O7v"/>
                         <outlet property="switchToFitToWindowMenuItem" destination="d9h-3l-mAH" id="gda-Df-WtZ"/>
                         <outlet property="systemThemeMenuItem" destination="I6E-O3-RVP" id="AYN-qT-D7o"/>
@@ -1180,7 +1192,7 @@ Gw
                                     <rect key="frame" x="0.0" y="0.0" width="745" height="522"/>
                                     <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                     <subviews>
-                                        <textView wantsLayer="YES" importsGraphics="NO" richText="NO" verticallyResizable="YES" findStyle="bar" spellingCorrection="YES" smartInsertDelete="YES" id="Hvc-43-Pyw">
+                                        <textView wantsLayer="YES" importsGraphics="NO" verticallyResizable="YES" findStyle="bar" id="Hvc-43-Pyw">
                                             <rect key="frame" x="0.0" y="0.0" width="745" height="522"/>
                                             <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                                             <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
@@ -1199,7 +1211,7 @@ Gw
                                 </scroller>
                             </scrollView>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="5j6-wZ-TtS">
-                                <rect key="frame" x="18" y="563" width="66" height="18"/>
+                                <rect key="frame" x="20" y="563" width="66" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="Debug" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="KRw-yH-fgB">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>
@@ -1232,7 +1244,7 @@ Gw
                                 </connections>
                             </button>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="2EE-mf-d8b">
-                                <rect key="frame" x="257" y="563" width="56" height="18"/>
+                                <rect key="frame" x="253" y="563" width="56" height="18"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <buttonCell key="cell" type="check" title="Error" bezelStyle="regularSquare" imagePosition="left" state="on" inset="2" id="UBJ-dq-OJx">
                                     <behavior key="behavior" changeContents="YES" doesNotDimImage="YES" lightByContents="YES"/>

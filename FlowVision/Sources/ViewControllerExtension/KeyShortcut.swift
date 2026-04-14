@@ -43,6 +43,16 @@ extension ViewController {
         
         let characters = (event.charactersIgnoringModifiers ?? "").lowercased()
         let specialKey = event.specialKey ?? .f30
+
+        // 把按键信息打印出来，用于调试不同键盘的键值差异
+        // var modifierStrings: [String] = []
+        // if isCommandPressed { modifierStrings.append("Command") }
+        // if isAltPressed { modifierStrings.append("Option") }
+        // if isCtrlPressed { modifierStrings.append("Control") }
+        // if isShiftPressed { modifierStrings.append("Shift") }
+        // if isFnPressed { modifierStrings.append("Fn") }
+        // let modifierDescription = modifierStrings.isEmpty ? "None" : modifierStrings.joined(separator: "+")
+        // log("Key Event Debug - characters: \(characters), keyCode: \(event.keyCode), specialKey: \(specialKey), modifierFlags: \(modifierFlags.rawValue), Modifiers: \(modifierDescription)", level: .debug)
         
         // 快速搜索
         // Quick search
@@ -229,7 +239,7 @@ extension ViewController {
                 // 如果焦点在CollectionView
                 // If focus is in CollectionView
                 if publicVar.isCollectionViewFirstResponder{
-                    renameAlert(urls: publicVar.selectedUrls())
+                    handleRename(urls: publicVar.selectedUrls())
                     return nil
                 }
             }
@@ -253,13 +263,13 @@ extension ViewController {
                 }
                 return nil
             }
-            
-            // 检查按键是否是 "L" 键
-            // Check if key is "L"
-            if characters == "l" && noModifierKey {
+
+            // 检查按键是否是 "J" 键
+            // Check if key is "J"
+            if characters == "j" && noModifierKey {
                 if publicVar.isInLargeView,
                    largeImageView.file.type == .video {
-                    largeImageView.specifyABPlayPositionAuto()
+                    largeImageView.actRememberPlayPosition()
                 }
                 return nil
             }
@@ -269,7 +279,17 @@ extension ViewController {
             if characters == "k" && noModifierKey {
                 if publicVar.isInLargeView,
                    largeImageView.file.type == .video {
-                    largeImageView.actRememberPlayPosition()
+                    largeImageView.actABPlay()
+                }
+                return nil
+            }
+
+            // 检查按键是否是 "L" 键
+            // Check if key is "L"
+            if characters == "l" && noModifierKey {
+                if publicVar.isInLargeView,
+                   largeImageView.file.type == .video {
+                    largeImageView.actSequentialPlay()
                 }
                 return nil
             }
@@ -284,8 +304,8 @@ extension ViewController {
             // 检查按键是否是 Command+[ 键
             // Check if key is Command+[
             if characters == "[" && isOnlyCommandPressed {
-                if !publicVar.isInLargeView{
-                    switchDirByDirection(direction: .back, stackDeep: 0)
+                if publicVar.isInLargeView{
+                    previousLargeImage()
                 }
                 return nil
             }
@@ -293,15 +313,9 @@ extension ViewController {
             // 检查按键是否是 Command+] 键
             // Check if key is Command+]
             if characters == "]" && isOnlyCommandPressed {
-                if !publicVar.isInLargeView{
-                    switchDirByDirection(direction: .forward, stackDeep: 0)
+                if publicVar.isInLargeView{
+                    nextLargeImage()
                 }
-                return nil
-            }
-
-            if ["1","2","3","4","5","6","7"].contains(characters) && isOnlyCommandPressed {
-                let index = Int(characters)! - 1
-                handleToggleFinderTag(FinderTag.all[index].name)
                 return nil
             }
 
@@ -488,7 +502,7 @@ extension ViewController {
                     // 如果焦点在CollectionView
                     // If focus is in CollectionView
                     if publicVar.isCollectionViewFirstResponder{
-                        renameAlert(urls: publicVar.selectedUrls())
+                        handleRename(urls: publicVar.selectedUrls())
                         return nil
                     }
                 }else{
@@ -570,6 +584,46 @@ extension ViewController {
                     }
                 }
             }
+
+            // 检查按键是否是 Command+1~9 键
+            // Check if key is Command+1~9
+            if ["1","2","3","4","5","6","7","8","9"].contains(characters) && isOnlyCommandPressed {
+                if publicVar.isCollectionViewFirstResponder {
+                    let index = Int(characters)! - 1
+                    handleToggleFinderTag(FinderTag.all[index].name)
+                    return nil
+                }
+            }
+
+            // 检查按键是否是 Command+Shift+1~9 键
+            // Check if key is Command+Shift+1~9
+            // if ["1","2","3","4","5","6","7","8","9"].contains(characters) && isCommandPressed && isShiftPressed && !isAltPressed && !isCtrlPressed {
+            //     if publicVar.isCollectionViewFirstResponder {
+            //         let index = Int(characters)! - 1
+            //         toggleFinderTagFilter(index)
+            //         return nil
+            //     }
+            // }
+
+            // 检查按键是否是 Control+1~5 键
+            // Check if key is Command+1~5
+            if ["1","2","3","4","5","0"].contains(characters) && isOnlyCtrlPressed {
+                if publicVar.isCollectionViewFirstResponder {
+                    let index = Int(characters)!
+                    handleRating(rating: index)
+                    return nil
+                }
+            }
+
+            // 检查按键是否是 Control+Shift+1~5 键
+            // Check if key is Control+Shift+1~5
+            // if ["1","2","3","4","5","0"].contains(characters) && isCtrlPressed && isShiftPressed && !isAltPressed && !isCommandPressed {
+            //     if publicVar.isCollectionViewFirstResponder {
+            //         let index = Int(characters)!
+            //         toggleRatingFilter(index)
+            //         return nil
+            //     }
+            // }
             
             // 检查按键是否是 Opt+1~9 键
             // Check if key is Opt+1~9
@@ -879,79 +933,40 @@ extension ViewController {
                 }
             }
             
-            // 检查按键是否是 "B" 键
-            // Check if key is "B"
-            if characters == "b" && noModifierKey && TAGGING_FEATURE_ENABLED {
-                // 如果焦点在CollectionView
-                // If focus is in CollectionView
-                if publicVar.isCollectionViewFirstResponder{
-                    handleTagging()
-                    return nil
-                }
-            }
-            
         }
         
-        // 处理弹出重命名对话框、OCR状态的复制粘贴操作
-        // Handle copy/paste operations for rename dialog popup and OCR state
+        // 处理弹出重命名对话框、OCR状态的 Home/End 光标移动操作
+        // Handle Home/End cursor movement for rename dialog popup and OCR state
+        if !publicVar.isKeyEventEnabled || largeImageView.isInOcrState {
+            if specialKey == .home {
+                NSApp.keyWindow?.firstResponder?.moveToBeginningOfDocument(nil)
+                return nil
+            }
+            if specialKey == .end {
+                NSApp.keyWindow?.firstResponder?.moveToEndOfDocument(nil)
+                return nil
+            }
+        }
+
+        // 处理弹出重命名对话框、OCR状态的复制粘贴、撤销操作
+        // Handle copy/paste and undo operations for rename dialog popup and OCR state
         if (!publicVar.isKeyEventEnabled || largeImageView.isInOcrState) && isOnlyCommandPressed {
             switch event.charactersIgnoringModifiers {
             case "a":
-                if let responder = NSApp.keyWindow?.firstResponder, responder.responds(to: #selector(NSText.selectAll(_:))) {
-                    responder.perform(#selector(NSText.selectAll(_:)), with: nil)
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                } else {
-                    // 处理自定义 Command+A 操作
-                    // Handle custom Command+A action
-                    log("Custom Command+A action")
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                }
+                NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
+                return nil
             case "c":
-                if let responder = NSApp.keyWindow?.firstResponder, responder.responds(to: #selector(NSText.copy(_:))) {
-                    responder.perform(#selector(NSText.copy(_:)), with: nil)
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                } else {
-                    // 处理自定义 Command+C 操作
-                    // Handle custom Command+C action
-                    log("Custom Command+C action")
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                }
+                NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+                return nil
             case "v":
-                if let responder = NSApp.keyWindow?.firstResponder, responder.responds(to: #selector(NSText.paste(_:))) {
-                    responder.perform(#selector(NSText.paste(_:)), with: nil)
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                } else {
-                    // 处理自定义 Command+V 操作
-                    // Handle custom Command+V action
-                    log("Custom Command+V action")
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                }
+                NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                return nil
             case "x":
-                if let responder = NSApp.keyWindow?.firstResponder, responder.responds(to: #selector(NSText.cut(_:))) {
-                    responder.perform(#selector(NSText.cut(_:)), with: nil)
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                } else {
-                    // 处理自定义 Command+X 操作
-                    // Handle custom Command+X action
-                    log("Custom Command+X action")
-                    // 事件已处理，返回 nil 以防止传递给下一个响应者
-                    // Event handled, return nil to prevent passing to next responder
-                    return nil
-                }
+                NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+                return nil
+            case "z":
+                NSApp.sendAction(Selector(("undo:")), to: nil, from: nil)
+                return nil
             default:
                 break
             }
