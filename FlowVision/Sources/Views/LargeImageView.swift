@@ -1283,6 +1283,56 @@ class LargeImageView: NSView {
             }
         }
     }
+
+    private func getZoomFactor(direction: Int) -> CGFloat {
+        guard let originalSize = getCurrentImageOriginalSizeInScreenScale() else { return 1.25 }
+        let ow = originalSize.width
+        let cw = imageView.frame.size.width
+        var zoomFactor: CGFloat = 1.0
+        let steps = [0.01, 0.05, 0.1, 0.2, 0.25, 0.33, 0.5, 0.66, 0.75, 1.0]
+        if direction > 0 {
+            if cw >= ow {
+                while true {
+                    if ow * zoomFactor > cw {
+                        zoomFactor = (ow * zoomFactor) / cw
+                        break
+                    } else {
+                        zoomFactor += 0.5
+                    }
+                }
+            } else {
+                for s in steps {
+                    if ow * s > cw {
+                        zoomFactor = (ow * s) / cw
+                        break
+                    }
+                }
+            }
+        } else {
+            var found = false
+            if cw >= ow {
+                zoomFactor = (cw / ow).rounded(.up)
+                while zoomFactor >= 1 {
+                    if ow * zoomFactor < cw {
+                        zoomFactor = cw / (ow * zoomFactor)
+                        found = true
+                        break
+                    } else {
+                        zoomFactor -= 0.5
+                    }
+                }
+            }
+            if !found {
+                for s in steps.reversed() {
+                    if ow * s < cw {
+                        zoomFactor = cw / (ow * s)
+                        break
+                    }
+                }
+            }
+        }
+        return zoomFactor
+    }
     
     func zoom(direction: Int = 0){
         if file.type == .video {return}
@@ -1297,7 +1347,8 @@ class LargeImageView: NSView {
 //        }
         // applyZoom(scale: scale, originalSize: currentSize, centerPoint: CGPoint(x: imageView.bounds.size.width/2, y: imageView.bounds.size.height/2))
         
-        let zoomFactor: CGFloat = 1.25
+        // let zoomFactor: CGFloat = 1.25
+        let zoomFactor: CGFloat = getZoomFactor(direction: direction)
         let locationInView = self.convert(NSPoint(x: self.frame.size.width / 2, y: self.frame.size.height / 2), from: nil)
         let locationInImageView = imageView.convert(locationInView, from: self)
         
