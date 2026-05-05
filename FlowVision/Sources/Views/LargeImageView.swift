@@ -1285,7 +1285,8 @@ class LargeImageView: NSView {
     }
 
     private func getZoomFactor(direction: Int) -> CGFloat {
-        guard let originalSize = getCurrentImageOriginalSizeInScreenScale() else { return 1.25 }
+        guard let originalSize =
+                getCurrentImageOriginalSizeInScreenScale() else { return 1.25 }
         let ow = originalSize.width
         let cw = imageView.frame.size.width
         var zoomFactor: CGFloat = 1.0
@@ -1297,7 +1298,7 @@ class LargeImageView: NSView {
                         zoomFactor = (ow * zoomFactor) / cw
                         break
                     } else {
-                        zoomFactor += 0.5
+                        zoomFactor += (cw >= 3 * ow ? 1 : 0.5)
                     }
                 }
             } else {
@@ -1318,7 +1319,7 @@ class LargeImageView: NSView {
                         found = true
                         break
                     } else {
-                        zoomFactor -= 0.5
+                        zoomFactor -= (cw >= 3 * ow ? 1 : 0.5)
                     }
                 }
             }
