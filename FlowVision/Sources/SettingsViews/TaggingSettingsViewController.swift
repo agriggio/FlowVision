@@ -83,6 +83,8 @@ class CustomTagView: NSView {
         tableView.delegate = self
         tableView.registerForDraggedTypes([Self.dragType])
         tableView.draggingDestinationFeedbackStyle = .regular
+        tableView.target = self
+        tableView.doubleAction = #selector(tableViewDoubleClicked(_:))
         
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("Tag"))
         col.resizingMask = .autoresizingMask
@@ -130,6 +132,14 @@ class CustomTagView: NSView {
         case 1: removeSelected()
         default: break
         }
+    }
+    
+    @objc private func tableViewDoubleClicked(_ sender: NSTableView) {
+        let row = sender.clickedRow
+        guard row >= 0, row < tags.count else { return }
+        guard let cell = sender.view(atColumn: 0, row: row, makeIfNecessary: false) as? TagItemCellView else { return }
+        window?.makeFirstResponder(cell.nameField)
+        cell.nameField.selectText(nil)
     }
     
     // MARK: - Actions

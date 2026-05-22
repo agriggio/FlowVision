@@ -217,7 +217,19 @@
 			<string>Default</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>org.videolan.vob</string>
+				<string>public.vob-video</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>M2V Video</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Default</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>public.mpeg-2-video</string>
 			</array>
 		</dict>
 	</array>

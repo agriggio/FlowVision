@@ -130,7 +130,10 @@ class VideoPlayerControlsView: NSView {
     
     private var loopModeButton: NSButton!
     private var fullscreenButton: NSButton!
-    private var volumeBeforeMute: Float = 1.0
+    private var volumeBeforeMute: Float = {
+        let saved = UserDefaults.standard.float(forKey: "videoVolumeBeforeMute")
+        return saved > 0 ? saved : 1.0
+    }()
     
     private let progressBarHeight: CGFloat = 3
     private let handleWidth: CGFloat = 3
@@ -704,6 +707,7 @@ class VideoPlayerControlsView: NSView {
         
         if player.volume > 0 {
             volumeBeforeMute = player.volume
+            UserDefaults.standard.set(volumeBeforeMute, forKey: "videoVolumeBeforeMute")
             player.volume = 0
         } else {
             player.volume = volumeBeforeMute > 0 ? volumeBeforeMute : 1.0

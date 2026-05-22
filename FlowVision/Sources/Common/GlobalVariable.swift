@@ -135,11 +135,11 @@ class GlobalVar{
     var rawFileUseThumbnail = true
 
     init(){
-        HandledImageExtensions = ["jpg", "jpeg", "jxl", "png", "gif", "bmp", "heif", "heic", "hif", "avif", "tif", "tiff", "webp", "jfif", "jp2", "ai", "psd", "ico", "icns", "svg", "tga"]
-        HandledRawExtensions = ["crw", "cr2", "cr3", "nef", "nrw", "arw", "srf", "sr2", "rw2", "orf", "raf", "pef", "dng", "raw", "rwl", "x3f", "3fr", "fff", "iiq", "mos", "dcr", "erf", "mrw", "gpr", "srw"]
+        HandledImageExtensions = ["jpg", "jpeg", "jpe", "jxl", "png", "gif", "bmp", "heif", "heic", "heics", "hif", "avif", "tif", "tiff", "webp", "jfif", "jp2", "ai", "psd", "ico", "cur", "icns", "svg", "tga", "pvr", "dds", "astc", "ktx", "ktx2", "exr", "hdr", "mpo", "pict", "pct", "sgi", "pbm", "pgm", "ppm", "pnm", "pam", "pfm"]
+        HandledRawExtensions = ["crw", "cr2", "cr3", "nef", "nrw", "arw", "arq", "sr2", "rw2", "orf", "srf", "raf", "pef", "dng", "raw", "rwl", "3fr", "fff", "iiq", "mos", "dcr", "kdc", "erf", "mrw", "srw"] + ["gpr", "x3f"]
         HandledImageAndRawExtensions = HandledImageExtensions + HandledRawExtensions
-        HandledNativeSupportedVideoExtensions = ["mp4", "mov", "m2ts", "ts", "mpeg", "mpg", "m4v", "vob"]
-        HandledNotNativeSupportedVideoExtensions = ["mkv", "mts", "avi", "flv", "f4v", "asf", "wmv", "rmvb", "rm", "webm", "divx", "xvid", "3gp", "3g2"]
+        HandledNativeSupportedVideoExtensions = ["mp4", "mov", "m2ts", "mts", "ts", "mpeg", "mpg", "mpe", "m2v", "m4v", "vob"]
+        HandledNotNativeSupportedVideoExtensions = ["mkv", "avi", "flv", "f4v", "asf", "wmv", "rmvb", "rm", "webm", "divx", "xvid", "3gp", "3g2", "mjpeg"]
         HandledVideoExtensions = HandledNativeSupportedVideoExtensions + HandledNotNativeSupportedVideoExtensions
         // 不能为""，否则会把目录异常包含进来
         // Cannot be "", otherwise directories will be incorrectly included
@@ -206,7 +206,7 @@ func getSystemVolumeName() -> String? {
         let resourceValues = try rootURL.resourceValues(forKeys: [.volumeNameKey])
         return resourceValues.volumeName
     } catch {
-        print("Error retrieving volume name: \(error)")
+        log("Error retrieving volume name: \(error)", level: .warn)
         return nil
     }
 }
