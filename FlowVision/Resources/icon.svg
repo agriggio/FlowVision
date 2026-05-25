@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="275 105 250 250"
+     preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="presGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="100%" stop-color="#E2E8F0" />
+    </linearGradient>
+
+    <linearGradient id="iconBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="40%" stop-color="#3730A3" />
+      <stop offset="100%" stop-color="#1E1B4B" />
+    </linearGradient>
+
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34D399" />
+      <stop offset="40%" stop-color="#059669" />
+      <stop offset="80%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#3B82F6" />
+    </linearGradient>
+
+    <linearGradient id="bladeHighlight" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#A7F3D0" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#22D3EE" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#60A5FA" stop-opacity="0"/>
+    </linearGradient>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="coreGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="appShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#1E1B4B" flood-opacity="0.25"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1E1B4B" flood-opacity="0.15"/>
+    </filter>
+    
+    <filter id="elementShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0F172A" flood-opacity="0.06"/>
+    </filter>
+
+    <path id="swirlBlade" d="M 0,-95 C 45,-95 80,-75 95,-40 C 60,-35 30,-25 0,-15 C -20,-30 -25,-65 0,-95 Z" />
+  </defs>
+
+<!--  <rect width="800" height="600" fill="url(#presGrad)" /> -->
+
+<!--
+  <g filter="url(#elementShadow)" opacity="0.35">
+    <rect x="110" y="120" width="70" height="55" rx="8" fill="none" stroke="#64748B" stroke-width="2" transform="rotate(-15, 145, 147)" />
+    <path d="M 120,160 L 140,140 L 155,152 L 165,145 L 175,155" fill="none" stroke="#64748B" stroke-width="2" transform="rotate(-15, 145, 147)" />
+    <circle cx="135" cy="135" r="4" fill="#64748B" transform="rotate(-15, 145, 147)" />
+
+    <path d="M 630,90 L 655,90 L 662,100 L 700,100 A 6,6 0 0 1 706,106 L 706,145 A 6,6 0 0 1 700,151 L 630,151 A 6,6 0 0 1 624,145 L 624,96 A 6,6 0 0 1 630,90 Z" fill="none" stroke="#475569" stroke-width="2" transform="rotate(12, 665, 120)" />
+
+    <path d="M 130,440 L 155,440 L 162,450 L 200,450 A 6,6 0 0 1 206,456 L 206,495 A 6,6 0 0 1 200,501 L 130,501 A 6,6 0 0 1 124,495 L 124,446 A 6,6 0 0 1 130,440 Z" fill="none" stroke="#475569" stroke-width="2" transform="rotate(-8, 165, 470)" />
+  </g>
+-->
+
+  <g filter="url(#appShadow)">
+<!--    <rect x="260" y="90" width="280" height="280" rx="64"
+     fill="url(#iconBgGrad)" /> -->
+    <rect x="275" y="105" width="250" height="250" rx="64" fill="url(#iconBgGrad)" />
+  </g>
+
+
+  <circle cx="400" cy="230" r="115" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="1.5" />
+
+
+  <g transform="translate(400, 230)">
+    
+    <use href="#swirlBlade" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" fill="url(#bladeHighlight)" />
+    
+    <use href="#swirlBlade" transform="rotate(60)" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" transform="rotate(60)" fill="url(#bladeHighlight)" />
+    
+    <use href="#swirlBlade" transform="rotate(120)" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" transform="rotate(120)" fill="url(#bladeHighlight)" />
+    
+    <use href="#swirlBlade" transform="rotate(180)" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" transform="rotate(180)" fill="url(#bladeHighlight)" />
+    
+    <use href="#swirlBlade" transform="rotate(240)" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" transform="rotate(240)" fill="url(#bladeHighlight)" />
+    
+    <use href="#swirlBlade" transform="rotate(300)" fill="url(#bladeGrad)" />
+    <use href="#swirlBlade" transform="rotate(300)" fill="url(#bladeHighlight)" />
+
+    <circle cx="0" cy="0" r="24" fill="#22D3EE" opacity="0.25" filter="url(#glow)" />
+
+    <circle cx="12" cy="-12" r="3.5" fill="#FFFFFF" opacity="0.85" />
+
+<!--    <path d="M 0,-18 Q 0,0 18,0 Q 0,0 0,18 Q 0,0 -18,0 Q 0,0 0,-18
+     Z" fill="#FFFFFF" filter="url(#coreGlow)" />  -->
+    <circle cx="0" cy="0" r="10" fill="#FFFFFF"
+            filter="url(#coreGlow)" />
+  </g>
+
+<!--
+  <text x="400" y="435" 
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+        font-size="38" 
+        font-weight="800" 
+        fill="#0F172A" 
+        text-anchor="middle" 
+        letter-spacing="3">FLOWVISION</text>
+
+  <text x="400" y="475" 
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" 
+        font-size="16" 
+        font-weight="600" 
+        fill="#475569" 
+        text-anchor="middle" 
+        letter-spacing="7">IMAGE VIEWER</text>
+-->
+</svg>
