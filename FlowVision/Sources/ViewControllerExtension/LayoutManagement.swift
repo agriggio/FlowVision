@@ -151,16 +151,8 @@ extension ViewController {
     }
     
     func switchToDetailView(doNotRefresh: Bool = false){
+        assertionFailure()
         return
-//        let defaults = UserDefaults.standard
-//        defaults.setEnum(LayoutType.detail, forKey: "layoutType")
-        publicVar.profile.layoutType = .detail
-        publicVar.profile.saveToUserDefaults(withKey: "CustomStyle_v2_current")
-        publicVar.updateToolbar()
-        publicVar.isNeedChangeLayoutType = true
-        if !doNotRefresh {
-            refreshCollectionView(dryRun: true, needLoadThumbPriority: true)
-        }
     }
     
     func changeThumbSize(thumbSize: Int, doNotRefresh: Bool = false){

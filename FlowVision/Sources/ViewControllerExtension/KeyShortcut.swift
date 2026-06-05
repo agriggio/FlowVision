@@ -458,15 +458,18 @@ extension ViewController {
             // 检查按键是否是 Esc 键
             // Check if key is Esc
             if event.keyCode == 53 {
-                //                    self.view.window?.close()
-                if publicVar.isInLargeView{
-                    closeLargeImage(0)
-                    return nil
-                }else{
-                    if publicVar.isCollectionViewFirstResponder{
-                        collectionView.deselectAll(nil)
+                if globalVar.isEscKeyToGoBack {                 
+                    if publicVar.isInLargeView{
+                        closeLargeImage(0)
+                        return nil
+                    }else{
+                        if publicVar.isCollectionViewFirstResponder{
+                            collectionView.deselectAll(nil)
+                        }
+                        return nil
                     }
-                    return nil
+                } else {
+                    self.view.window?.close()
                 }
             }
             

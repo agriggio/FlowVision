@@ -15,6 +15,8 @@ final class ActionsSettingsViewController: NSViewController, SettingsPane {
     
     @IBOutlet weak var radioEnterKeyRename: NSButton!
     @IBOutlet weak var radioEnterKeyOpen: NSButton!
+    @IBOutlet weak var radioEscKeyGoBack: NSButton!
+    @IBOutlet weak var radioEscKeyCloseWindow: NSButton!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -22,13 +24,19 @@ final class ActionsSettingsViewController: NSViewController, SettingsPane {
         radioEnterKeyOpen.state = globalVar.isEnterKeyToOpen ? .on : .off
         radioEnterKeyRename.state = globalVar.isEnterKeyToOpen ? .off : .on
 
+        radioEscKeyGoBack.state = globalVar.isEscKeyToGoBack ? .on : .off
+        radioEscKeyCloseWindow.state = globalVar.isEscKeyToGoBack ? .off : .on
+
         // MARK: RTL support
         if let container = radioEnterKeyRename.superview {
             convertToLeadingLayoutForRTL(container)
         }
+        if let container = radioEscKeyGoBack.superview {
+            convertToLeadingLayoutForRTL(container)
+        }
     }
 
-    @IBAction func enterKeyToOpenToggled(_ sender: NSButton) {
+    @IBAction func enterKeyFuncToggled(_ sender: NSButton) {
         let tag = sender.tag
         if tag == 0 {
             globalVar.isEnterKeyToOpen = false
@@ -36,5 +44,15 @@ final class ActionsSettingsViewController: NSViewController, SettingsPane {
             globalVar.isEnterKeyToOpen = true
         }
         UserDefaults.standard.set(globalVar.isEnterKeyToOpen, forKey: "isEnterKeyToOpen")
+    }
+    
+    @IBAction func escKeyFuncToggled(_ sender: NSButton) {
+        let tag = sender.tag
+        if tag == 0 {
+            globalVar.isEscKeyToGoBack = true
+        } else if tag == 1 {
+            globalVar.isEscKeyToGoBack = false
+        }
+        UserDefaults.standard.set(globalVar.isEscKeyToGoBack, forKey: "isEscKeyToGoBack")
     }
 }

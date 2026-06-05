@@ -146,7 +146,7 @@ class CoreAreaView: NSView {
             if viewController.publicVar.isInLargeView {
                 let pasteboard = sender.draggingPasteboard
                 if let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
-                    getViewController(self)?.handleDraggedFiles(urls)
+                    viewController.handleDraggedFiles(urls)
                     return true
                 }
             }else{

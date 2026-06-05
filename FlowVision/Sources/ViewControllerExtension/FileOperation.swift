@@ -1712,9 +1712,17 @@ extension ViewController {
             guard let rowView = outlineView.rowView(atRow: row, makeIfNecessary: false) else { continue }
             if let treeNode = outlineView.item(atRow: row) as? TreeNode {
                 let isCut = globalVar.cutItemPaths.contains(treeNode.fullPath)
+                let targetAlpha: CGFloat
+                if isCut {
+                    targetAlpha = 0.4
+                } else if treeNode.isHidden {
+                    targetAlpha = 0.5
+                } else {
+                    targetAlpha = 1.0
+                }
                 for col in 0..<outlineView.numberOfColumns {
                     if let cellView = rowView.view(atColumn: col) as? NSView {
-                        cellView.alphaValue = isCut ? 0.4 : 1.0
+                        cellView.alphaValue = targetAlpha
                     }
                 }
             }

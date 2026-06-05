@@ -714,6 +714,7 @@ class LargeImageView: NSView {
     }
 
     func playVideo(reload: Bool = false, reloadForAB: Bool = false) {
+        guard let viewController = getViewController(self) else { return }
         hideUnsupportedVideoOverlay()
         
         if let url = URL(string: file.path) {
@@ -785,7 +786,7 @@ class LargeImageView: NSView {
                 
                 // 读取元信息
                 // Read metadata
-                if getViewController(self)?.publicVar.isShowExif == true {
+                if viewController.publicVar.isShowExif == true {
                     updateVideoMetadata(url: url)
                 }
 
@@ -861,7 +862,7 @@ class LargeImageView: NSView {
                                 queue: .main
                             ) { [weak self] _ in
                                 guard let self = self else { return }
-                                getViewController(self)?.nextLargeImage(isShowReachEndPrompt: true, firstShowThumb: true)
+                                viewController.nextLargeImage(isShowReachEndPrompt: true, firstShowThumb: true)
                             }
                         } else {
                             queuePlayer.actionAtItemEnd = .advance
@@ -1365,9 +1366,10 @@ class LargeImageView: NSView {
     }
     
     func zoom(direction: Int = 0){
+        guard let viewController = getViewController(self) else { return }
         if file.type == .video {return}
         
-        // guard let originalSize = getViewController(self)?.getCurrentImageOriginalSizeInScreenScale() else { return }
+        // guard let originalSize = viewController.getCurrentImageOriginalSizeInScreenScale() else { return }
         // let currentSize = imageView.bounds.size
 //        var scale = 1.0
 //        if direction == -1 {
@@ -1410,14 +1412,15 @@ class LargeImageView: NSView {
         
         // 重新绘制图像
         // Redraw image
-        getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
+        viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
         
         calcRatio(isShowPrompt: true)
     }
 
     func zoomFit() {
+        guard let viewController = getViewController(self) else { return }
         if file.type == .image {
-            getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: true, triggeredByLongPress: true, isByZoom: true)
+            viewController.changeLargeImage(firstShowThumb: false, resetSize: true, triggeredByLongPress: true, isByZoom: true)
             
             // 同步编辑画布位置和大小
             // Sync editing canvas position and size
@@ -1451,6 +1454,7 @@ class LargeImageView: NSView {
     }
     
     @objc private func handleMagnification(_ gesture: NSMagnificationGestureRecognizer) {
+        guard let viewController = getViewController(self) else { return }
         if file.type == .video {return}
         
         let magnification = 1 + gesture.magnification * sensitivity
@@ -1466,14 +1470,14 @@ class LargeImageView: NSView {
             }
         case .ended:
             initialScale *= magnification
-            getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
+            viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
         default:
             break
         }
         
         // 缩放后防止意外滚动
         // Prevent accidental scrolling after zoom
-        _ = getViewController(self)?.publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: -1)
+        _ = viewController.publicVar.timer.intervalSafe(name: "largeImageZoomForbidSwitch", second: -1)
     }
     
     private func applyZoom(scale: CGFloat, originalSize: CGSize, centerPoint: CGPoint) {
@@ -1507,8 +1511,9 @@ class LargeImageView: NSView {
     }
     
     func calcRatio(isShowPrompt: Bool) {
+        guard let viewController = getViewController(self) else { return }
         let ratio = imageView.frame.size.width/customZoomSize().width
-        getViewController(self)!.publicVar.zoomLock = ratio
+        viewController.publicVar.zoomLock = ratio
         
         if isShowPrompt {
             let text = String(Int((ratio*100).rounded()))
@@ -1606,17 +1611,18 @@ class LargeImageView: NSView {
     }
     
     override func mouseDown(with event: NSEvent) {
+        guard let viewController = getViewController(self) else { return }
         if isEventInVideoControls(event) { return }
 
         // 临时按住左键也能缩放
         // Temporarily hold left button to enable zoom
-        getViewController(self)!.publicVar.isLeftMouseDown = true
+        viewController.publicVar.isLeftMouseDown = true
         
         isKeyWindowWhenMouseDown = self.window?.isKeyWindow ?? true
         
         // 检测双击
         // Detect double click
-        if !(getViewController(self)!.publicVar.isRightMouseDown) {
+        if !(viewController.publicVar.isRightMouseDown) {
             let currentTime = event.timestamp
             let currentLocation = event.locationInWindow
             if currentTime - lastClickTime < minDoubleClickInterval {
@@ -1624,7 +1630,7 @@ class LargeImageView: NSView {
             }
             if currentTime - lastClickTime < NSEvent.doubleClickInterval,
                distanceBetweenPoints(lastClickLocation, currentLocation) < positionThreshold {
-                getViewController(self)?.closeLargeImage(0)
+                viewController.closeLargeImage(0)
             }
             lastClickTime = currentTime
             lastClickLocation = currentLocation
@@ -1632,7 +1638,7 @@ class LargeImageView: NSView {
         
         // 如果是OCR则不执行后面操作
         // If in OCR state, do not execute subsequent operations
-        if isInOcrState && !getViewController(self)!.publicVar.isRightMouseDown {return}
+        if isInOcrState && !viewController.publicVar.isRightMouseDown {return}
         
         initialPos =  self.convert(event.locationInWindow, from: nil)
         lastDragLocation = initialPos
@@ -1656,10 +1662,11 @@ class LargeImageView: NSView {
     }
 
     private func performLongPressZoom(at point: NSPoint) {
+        guard let viewController = getViewController(self) else { return }
         
         doNotPopRightMenu=true
         
-        if !getViewController(self)!.publicVar.isInLargeView || !getViewController(self)!.publicVar.isInLargeViewAfterAnimate {
+        if !viewController.publicVar.isInLargeView || !viewController.publicVar.isInLargeViewAfterAnimate {
             // 由于在大图状态下双击关闭又快速连击，会导致此处被异常调用，所以加以限制
             // Due to double-click close and rapid consecutive clicks in large image state, this may be abnormally called, so add restriction
             return
@@ -1667,7 +1674,7 @@ class LargeImageView: NSView {
         
         if file.type == .image {
             
-            if !getViewController(self)!.publicVar.isRightMouseDown {
+            if !viewController.publicVar.isRightMouseDown {
                 zoom100(point: point)
             }else{
                 zoomFit()
@@ -1678,9 +1685,10 @@ class LargeImageView: NSView {
     }
     
     override func mouseUp(with event: NSEvent) {
+        guard let viewController = getViewController(self) else { return }
         if isEventInVideoControls(event) { return }
 
-        if !(getViewController(self)!.publicVar.isRightMouseDown) {
+        if !(viewController.publicVar.isRightMouseDown) {
             if event.timestamp - lastMouseUpTime < minDoubleClickInterval {
                 return
             }
@@ -1689,7 +1697,7 @@ class LargeImageView: NSView {
         
         // 临时按住左键也能缩放
         // Temporarily hold left button to enable zoom
-        getViewController(self)!.publicVar.isLeftMouseDown = false
+        viewController.publicVar.isLeftMouseDown = false
         initialPos=nil
         longPressZoomTimer?.invalidate()
         longPressZoomTimer = nil
@@ -1697,7 +1705,7 @@ class LargeImageView: NSView {
         wheelZoomRegenTimer = nil
         
         if hasZoomedByWheel {
-            getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false)
+            viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false)
         }
         hasZoomedByWheel=false
         
@@ -1708,7 +1716,7 @@ class LargeImageView: NSView {
 
         // 检测点击左侧、右侧区域来切换图像
         // Detect clicks on left/right areas to switch images
-        if globalVar.clickEdgeToSwitchImage && !(getViewController(self)!.publicVar.isRightMouseDown) {
+        if globalVar.clickEdgeToSwitchImage && !(viewController.publicVar.isRightMouseDown) {
             let clickLocation = self.convert(event.locationInWindow, from: nil)
             let viewWidth = self.bounds.width
             // 先按百分比计算
@@ -1724,7 +1732,7 @@ class LargeImageView: NSView {
                 // Click left side, switch to previous image
                 if leftArrowImageView?.isHidden == false {
                     lastClickTime = 0
-                    getViewController(self)?.previousLargeImage()
+                    viewController.previousLargeImage()
                     return
                 }
             } else if clickLocation.x >= rightThreshold {
@@ -1732,7 +1740,7 @@ class LargeImageView: NSView {
                 // Click right side, switch to next image
                 if rightArrowImageView?.isHidden == false {
                     lastClickTime = 0
-                    getViewController(self)?.nextLargeImage()
+                    viewController.nextLargeImage()
                     return
                 }
             }
@@ -1740,8 +1748,8 @@ class LargeImageView: NSView {
 
         // 暂停/恢复视频
         // Pause/resume video
-        if !(getViewController(self)!.publicVar.isRightMouseDown) && isKeyWindowWhenMouseDown {
-            if file.type == .video && getViewController(self)!.publicVar.isInLargeViewAfterAnimate {
+        if !(viewController.publicVar.isRightMouseDown) && isKeyWindowWhenMouseDown {
+            if file.type == .video && viewController.publicVar.isInLargeViewAfterAnimate {
                 if videoPreventDoubleClickOpenPauseFlag {
                     videoPreventDoubleClickOpenPauseFlag = false
                     return
@@ -1754,9 +1762,10 @@ class LargeImageView: NSView {
     }
     
     override func mouseDragged(with event: NSEvent) {
+        guard let viewController = getViewController(self) else { return }
         if isEventInVideoControls(event) { return }
         guard let lastLocation = lastDragLocation else { return }
-        if isInOcrState && !getViewController(self)!.publicVar.isRightMouseDown {return}
+        if isInOcrState && !viewController.publicVar.isRightMouseDown {return}
         
         let newLocation = self.convert(event.locationInWindow, from: nil)
         if let initialPos = initialPos {
@@ -1797,7 +1806,7 @@ class LargeImageView: NSView {
                 // Sync editing canvas position
                 syncEditingCanvasFrame()
             } else if file.type == .video {
-                if getViewController(self)!.publicVar.isRightMouseDown {
+                if viewController.publicVar.isRightMouseDown {
                     let effectiveDx = userInterfaceLayoutDirection == .rightToLeft ? -dx : dx
                     seekVideoByDrag(deltaX: effectiveDx)
                     videoControlsView.showControls()
@@ -1848,16 +1857,19 @@ class LargeImageView: NSView {
     }
     
     override func rightMouseDown(with event: NSEvent) {
-        getViewController(self)!.publicVar.isRightMouseDown = true
+        guard let viewController = getViewController(self) else { return }
+        viewController.publicVar.isRightMouseDown = true
         mouseDown(with: event)
         // super.rightMouseDown(with: event)  // 继续传递事件
     }
 
     override func rightMouseUp(with event: NSEvent) {
+        guard let viewController = getViewController(self) else { return }
         mouseUp(with: event)
-        getViewController(self)!.publicVar.isRightMouseDown = false
+        viewController.publicVar.isRightMouseDown = false
         
-        if !doNotPopRightMenu && event.locationInWindow.y < getViewController(self)!.mainScrollView.bounds.height {
+        let rightMouseUpYmax = viewController.mainScrollView.bounds.height - (globalVar.autoHideToolbar ? 40 : 0)
+        if !doNotPopRightMenu && event.locationInWindow.y < rightMouseUpYmax {
             // 弹出菜单
             // Pop up menu
             let menu = NSMenu(title: "Custom Menu")
@@ -1908,7 +1920,7 @@ class LargeImageView: NSView {
                 isRatingEnabled: file.type == .image
             ) { [weak self] tagName in
                 guard let self = self else { return }
-                getViewController(self)?.handleToggleFinderTag(tagName)
+                viewController.handleToggleFinderTag(tagName)
             }
 
             menu.addItem(NSMenuItem.separator())
@@ -1927,7 +1939,7 @@ class LargeImageView: NSView {
             }
             let actionItemShowExif = menu.addItem(withTitle: textForExif, action: #selector(actShowExif), keyEquivalent: "i")
             actionItemShowExif.keyEquivalentModifierMask = []
-            actionItemShowExif.state = getViewController(self)!.publicVar.isShowExif ? .on : .off
+            actionItemShowExif.state = viewController.publicVar.isShowExif ? .on : .off
             
             if file.type == .image {
                 let actionItemOCR = menu.addItem(withTitle: NSLocalizedString("recognize-OCR", comment: "识别文本"), action: #selector(actOCR), keyEquivalent: "o")
@@ -1987,6 +1999,7 @@ class LargeImageView: NSView {
     }
     
     override func scrollWheel(with event: NSEvent) {
+        guard let viewController = getViewController(self) else { return }
         // 保证鼠标在图像上才缩放
         // Only zoom when mouse is on image
         // guard imageView.frame.contains(event.locationInWindow) else { return }
@@ -1999,14 +2012,14 @@ class LargeImageView: NSView {
             doNotPopRightMenu=true
         }
 
-        if getViewController(self)!.publicVar.isRightMouseDown || getViewController(self)!.publicVar.isLeftMouseDown || globalVar.scrollMouseWheelToZoom || isCommandKeyPressed() {
+        if viewController.publicVar.isRightMouseDown || viewController.publicVar.isLeftMouseDown || globalVar.scrollMouseWheelToZoom || isCommandKeyPressed() {
             
             do {
                 wheelZoomRegenTimer?.invalidate()
                 wheelZoomRegenTimer = nil
                 wheelZoomRegenTimer = Timer.scheduledTimer(withTimeInterval: 0.4, repeats: false) { [weak self] _ in
                     guard let self=self else{return}
-                    getViewController(self)?.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
+                    viewController.changeLargeImage(firstShowThumb: false, resetSize: false, triggeredByLongPress: false, isByZoom: true)
                     hasZoomedByWheel=false
                 }
             }
@@ -2095,8 +2108,7 @@ class LargeImageView: NSView {
     }
     
     @objc func openFileWithApp(_ sender: NSMenuItem) {
-        guard let appURL = sender.representedObject as? URL, let fileUrl = URL(string: file.path)
-            else { return }
+        guard let appURL = sender.representedObject as? URL, let fileUrl = URL(string: file.path) else { return }
         
         NSWorkspace.shared.open([fileUrl], withApplicationAt: appURL, configuration: NSWorkspace.OpenConfiguration(), completionHandler: { (app, error) in
             if let error = error {
@@ -2109,8 +2121,9 @@ class LargeImageView: NSView {
     
     @objc func actOpenInNewTab() {
         if let appDelegate=NSApplication.shared.delegate as? AppDelegate {
-            globalVar.isLaunchFromFile=true
-            if let windowController = appDelegate.createNewWindow(file.path) {
+            // 按住 Cmd 点击菜单项时在后台打开
+            // Hold Cmd when clicking the menu item to open in background
+            if let windowController = appDelegate.createNewWindow(file.path, isLaunchFromFile: true, openInBackground: NSEvent.modifierFlags.contains(.command)) {
                 appDelegate.openImageInTargetWindow(file.path, windowController: windowController)
             }
         }
@@ -2187,12 +2200,13 @@ class LargeImageView: NSView {
     }
 
     @objc func actShowExif() {
-        getViewController(self)!.publicVar.isShowExif.toggle()
+        guard let viewController = getViewController(self) else { return }
+        viewController.publicVar.isShowExif.toggle()
         if file.type == .video,
-           getViewController(self)!.publicVar.isShowExif {
+           viewController.publicVar.isShowExif {
             updateVideoMetadata(url: URL(string: file.path))
         }
-        // exifTextView.isHidden = !getViewController(self)!.publicVar.isShowExif
+        // exifTextView.isHidden = !viewController.publicVar.isShowExif
     }
     
     @objc func actShowVideoMetadata() {
@@ -2322,8 +2336,9 @@ class LargeImageView: NSView {
     }
     
     func doRotateR() {
+        guard let viewController = getViewController(self) else { return }
         file.rotate = (file.rotate+1)%4
-        getViewController(self)?.publicVar.rotationLock = file.rotate
+        viewController.publicVar.rotationLock = file.rotate
         if file.type == .video {
             lastActionTriggerdReload = "Rotate"
             playVideo(reloadForAB: true)
@@ -2334,7 +2349,7 @@ class LargeImageView: NSView {
             imageEditingView?.rotateClockwise()
             // 旋转后重新绘制图像
             // Redraw image after rotation
-            getViewController(self)?.changeLargeImage(firstShowThumb: true, resetSize: true, triggeredByLongPress: false)
+            viewController.changeLargeImage(firstShowThumb: true, resetSize: true, triggeredByLongPress: false)
             // 旋转后同步画布位置
             // Sync canvas position after rotation
             syncEditingCanvasFrame()
@@ -2342,8 +2357,9 @@ class LargeImageView: NSView {
     }
     
     func doRotateL() {
+        guard let viewController = getViewController(self) else { return }
         file.rotate = (file.rotate+3)%4
-        getViewController(self)?.publicVar.rotationLock = file.rotate
+        viewController.publicVar.rotationLock = file.rotate
         if file.type == .video {
             lastActionTriggerdReload = "Rotate"
             playVideo(reloadForAB: true)
@@ -2354,7 +2370,7 @@ class LargeImageView: NSView {
             imageEditingView?.rotateCounterclockwise()
             // 旋转后重新绘制图像
             // Redraw image after rotation
-            getViewController(self)?.changeLargeImage(firstShowThumb: true, resetSize: true, triggeredByLongPress: false)
+            viewController.changeLargeImage(firstShowThumb: true, resetSize: true, triggeredByLongPress: false)
             // 旋转后同步画布位置
             // Sync canvas position after rotation
             syncEditingCanvasFrame()

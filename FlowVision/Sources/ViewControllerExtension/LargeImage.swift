@@ -224,8 +224,7 @@ extension ViewController {
                 } else if globalVar.HandledImageAndRawExtensions.contains(resolved.pathExtension.lowercased()) ||
                     (globalVar.useInternalPlayer && globalVar.HandledNativeSupportedVideoExtensions.contains(resolved.pathExtension.lowercased())) {
                     if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
-                        globalVar.isLaunchFromFile = true
-                        if let windowController = appDelegate.createNewWindow(resolvedAbsPath) {
+                        if let windowController = appDelegate.createNewWindow(resolvedAbsPath, isLaunchFromFile: true) {
                             appDelegate.openImageInTargetWindow(resolvedAbsPath, windowController: windowController)
                         }
                     }
@@ -447,6 +446,27 @@ extension ViewController {
         let videoCount = fileDB.db[SortKeyDir(folderPath)]?.videoCount ?? 0
         let rangeCount = globalVar.useInternalPlayer ? imageCount+videoCount : imageCount
         var indexInfo = ""
+        if rangeCount == 0 {
+            globalVar.launchFileFolderExtCountsLock.lock()
+            let extCounts = globalVar.launchFileFolderExtCounts[folderPath] ?? [:]
+            globalVar.launchFileFolderExtCountsLock.unlock()
+            if !extCounts.isEmpty {
+                var fallbackImageCount = 0
+                var fallbackVideoCount = 0
+                for (ext, count) in extCounts {
+                    if publicVar.HandledImageAndRawExtensions.contains(ext) {
+                        fallbackImageCount += count
+                    }
+                    if publicVar.HandledVideoExtensions.contains(ext) {
+                        fallbackVideoCount += count
+                    }
+                }
+                let fallbackRangeCount = globalVar.useInternalPlayer ? fallbackImageCount + fallbackVideoCount : fallbackImageCount
+                if fallbackRangeCount > 0 {
+                    indexInfo = String(format: "(?/%d)", fallbackRangeCount)
+                }
+            }
+        }
         if rangeCount != 0 {
             if let file = fileDB.db[SortKeyDir(folderPath)]?.files[SortKeyFile(file.path, needGetProperties: true, sortType: publicVar.profile.sortType, isSortFolderFirst: publicVar.profile.isSortFolderFirst, isSortUseFullPath: publicVar.profile.isSortUseFullPath, randomSeed: publicVar.randomSeed)] {
                 let idInRange = globalVar.useInternalPlayer ? file.idInImageAndVideo : file.idInImage
@@ -913,7 +933,6 @@ extension ViewController {
                !window.isVisible {
                 windowController.showWindow(nil)
             }
-            globalVar.useCreateWindowShowDelay = false
             
             // 加载Exif
             // Load Exif
