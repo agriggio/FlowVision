@@ -97,13 +97,16 @@
     <use href="#swirlBlade" transform="rotate(300)" fill="url(#bladeGrad)" />
     <use href="#swirlBlade" transform="rotate(300)" fill="url(#bladeHighlight)" />
 
+    <circle cx="0" cy="0" r="60" fill="#FFFFFF" opacity="0.65"
+            filter="url(#coreGlow)" />
+
     <circle cx="0" cy="0" r="24" fill="#22D3EE" opacity="0.25" filter="url(#glow)" />
 
     <circle cx="12" cy="-12" r="3.5" fill="#FFFFFF" opacity="0.85" />
 
 <!--    <path d="M 0,-18 Q 0,0 18,0 Q 0,0 0,18 Q 0,0 -18,0 Q 0,0 0,-18
      Z" fill="#FFFFFF" filter="url(#coreGlow)" />  -->
-    <circle cx="0" cy="0" r="10" fill="#FFFFFF"
+    <circle cx="0" cy="0" r="10" fill="#FFFFFF" 
             filter="url(#coreGlow)" />
   </g>
 
