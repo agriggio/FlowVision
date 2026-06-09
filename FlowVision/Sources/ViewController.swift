@@ -688,7 +688,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     // 仅在视频范围内响应，范围外的由largeImageView中的鼠标事件正常处理
                     // Only respond within video range, outside range handled normally by mouse events in largeImageView
                     largeImageView.mouseDown(with: event)
-                    return nil
+                    // return nil
                 }
             }
             
@@ -713,7 +713,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     // 仅在视频范围内响应，范围外的由largeImageView中的鼠标事件正常处理
                     // Only respond within video range, outside range handled normally by mouse events in largeImageView
                     largeImageView.mouseUp(with: event)
-                    return nil
+                    // return nil
                 }
             }
             
@@ -761,14 +761,15 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             if event.window != self.view.window {
                 return event
             }
-            self.handleScrollWheel(event)
-            if publicVar.isInLargeView && largeImageView.file.type == .video {
-                // 视频播放器默认行为会利用滚动事件调整播放进度，所以不传递事件
-                // The default behavior of the video player will use the scroll event to adjust the playback progress, so don't pass the event
-                return nil
-            }else{
-                return event
+            if self.coreAreaView.frame.contains(event.locationInWindow) {
+                self.handleScrollWheel(event)
+                if publicVar.isInLargeView && largeImageView.file.type == .video {
+                    // 视频播放器默认行为会利用滚动事件调整播放进度，所以不传递事件
+                    // The default behavior of the video player will use the scroll event to adjust the playback progress, so don't pass the event
+                    return nil
+                }
             }
+            return event
         }
         
         // 滚动collectionView
@@ -815,7 +816,7 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             if event.window != self.view.window {
                 return event
             }
-            if true || self.coreAreaView.frame.contains(event.locationInWindow) {
+            if self.coreAreaView.frame.contains(event.locationInWindow) {
                 if !publicVar.isInLargeView {
                     self.drawingView?._rightMouseDown(with: event)
                     self._rightMouseDown(with: event)
@@ -1255,7 +1256,9 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
 
         // 读取信息线程
         // Read info thread
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        // 使用 Thread 而非 DispatchQueue.global，避免无限循环永久占用 GCD 线程池槽位
+        // Use Thread instead of DispatchQueue.global to avoid permanently consuming GCD thread pool slots in infinite loops
+        let readInfoThread = Thread { [weak self] in
             guard let self = self else { return }
             let operationQueue = OperationQueue()
             operationQueue.maxConcurrentOperationCount = globalVar.thumbThreadNum > 2 ? 2 : 1
@@ -1459,9 +1462,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
             }
         }
+        readInfoThread.qualityOfService = .userInitiated
+        readInfoThread.start()
         // 缩略图线程
         // Thumbnail thread
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        let thumbThread = Thread { [weak self] in
             guard let self = self else { return }
             let operationQueue = OperationQueue()
             operationQueue.maxConcurrentOperationCount = globalVar.thumbThreadNum
@@ -1743,8 +1748,10 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                 }
             }
         }
+        thumbThread.qualityOfService = .userInitiated
+        thumbThread.start()
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        let memMonitorThread = Thread { [weak self] in
             guard let self = self else { return }
             let memSizeInGB = getSystemMemorySize()
             while true {
@@ -1878,9 +1885,11 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
             }
             
         }
+        memMonitorThread.qualityOfService = .userInitiated
+        memMonitorThread.start()
         
         if isDeveloper {
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let devThread = Thread { [weak self] in
                 guard let self = self else { return }
                 while true {
                     if willTerminate {break}
@@ -1891,6 +1900,8 @@ class ViewController: NSViewController, NSSplitViewDelegate, NSSearchFieldDelega
                     }
                 }
             }
+            devThread.qualityOfService = .userInitiated
+            devThread.start()
         }
         
     }

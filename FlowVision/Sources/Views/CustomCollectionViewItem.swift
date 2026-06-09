@@ -1122,11 +1122,6 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                 if (true || selectedCount > 1 || file.type == .folder || file.type == .image || (file.type == .video && globalVar.useInternalPlayer && globalVar.HandledNativeSupportedVideoExtensions.contains(file.ext.lowercased()))) {
                     let titleTmp = NSLocalizedString("Open in New Tab", comment: "在新标签页中打开")
                     let actionItemOpenInNewTab = menu.addItem(withTitle: titleTmp, action: #selector(actOpenInNewTab), keyEquivalent: "")
-                    if isWindowNumMax() {
-                        actionItemOpenInNewTab.isEnabled=false
-                    }else{
-                        actionItemOpenInNewTab.isEnabled=true
-                    }
                 }
 
                 let isRecursive = viewController.publicVar.isRecursiveMode
@@ -1135,11 +1130,6 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                     let parentURL = url.deletingLastPathComponent()
                     if !parentURL.path.isEmpty && parentURL.absoluteString != url.absoluteString {
                         let actionItemShowParent = menu.addItem(withTitle: NSLocalizedString("Show in Original Folder", comment: "在原文件夹中显示"), action: #selector(actShowInOriginalFolder), keyEquivalent: "")
-                        if isWindowNumMax() {
-                            actionItemShowParent.isEnabled = false
-                        } else {
-                            actionItemShowParent.isEnabled = true
-                        }
                     }
                 }
 
@@ -1329,6 +1319,16 @@ class CustomCollectionViewItem: NSCollectionViewItem {
                let toSelect = collectionView.delegate?.collectionView?(collectionView, shouldSelectItemsAt: [indexPath]) {
                 collectionView.selectItems(at: toSelect, scrollPosition: [])
                 collectionView.delegate?.collectionView?(collectionView, didSelectItemsAt: toSelect)
+            }
+        }
+
+        if urls.count >= 8 {
+            let confirmed = showConfirmation(
+                title: NSLocalizedString("Open Multiple Windows", comment: "打开多个窗口"),
+                message: String(format: NSLocalizedString("You are about to open %d windows at once. Are you sure you want to continue?", comment: "您即将一次性打开 %d 个窗口，确定要继续吗？"), urls.count)
+            )
+            if !confirmed {
+                return
             }
         }
         

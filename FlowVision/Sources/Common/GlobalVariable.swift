@@ -26,8 +26,7 @@ let COLOR_COLLECTIONVIEW_BG_DARK = "#2D2D2D"
 
 class GlobalVar{
     var myFavoritesArray = ["/"]
-    var WINDOW_LIMIT=16
-    var windowNum=0
+    var windowNum = 0
     var toolbarIndex = 0
     var operationLogs: [String] = []
     var closedPaths: [String] = []
@@ -163,10 +162,6 @@ class GlobalVar{
 var globalVar = GlobalVar()
 
 let homeDirectory = NSHomeDirectory()
-
-func isWindowNumMax() -> Bool{
-    return globalVar.windowNum >= globalVar.WINDOW_LIMIT
-}
 
 func getMainViewController() -> ViewController? {
     if let viewController = NSApplication.shared.mainWindow?.contentViewController as? ViewController {

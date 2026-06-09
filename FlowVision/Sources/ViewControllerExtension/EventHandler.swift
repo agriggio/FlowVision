@@ -14,8 +14,7 @@ extension ViewController {
         if let lastPath = globalVar.closedPaths.last {
             globalVar.closedPaths.removeLast()
             if let appDelegate=NSApplication.shared.delegate as? AppDelegate {
-                let isDir = (try? URL(string: lastPath)?.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory ?? false
-                if isDir {
+                if lastPath.hasSuffix("/") {
                     _ = appDelegate.createNewWindow(lastPath)
                 } else {
                     if let windowController = appDelegate.createNewWindow(lastPath, isLaunchFromFile: true) {

@@ -127,7 +127,6 @@ class CustomPathControl: NSPathControl, NSMenuDelegate {
 
         // 在新标签页中打开
         let actionItemOpenInNewTab = menu.addItem(withTitle: NSLocalizedString("Open in New Tab", comment: "在新标签页中打开"), action: #selector(actOpenInNewTab), keyEquivalent: "")
-        actionItemOpenInNewTab.isEnabled = !isWindowNumMax()
 
         menu.addItem(NSMenuItem.separator())
 

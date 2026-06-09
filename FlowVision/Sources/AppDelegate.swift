@@ -309,11 +309,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     func createNewWindow(_ path: String? = nil, useCreateWindowShowDelay: Bool = false, isLaunchFromFile: Bool = false, urlsToSelect: [URL]? = nil, openInBackground: Bool = false) -> WindowController? {
         log("Start createNewWindow")
         // Start createNewWindow
-        if isWindowNumMax() {
-            showAlert(message: NSLocalizedString("window-num-max", comment: "窗口数量超过限制"))
-            return nil
-        }
-        
+
         var openFolder: String? = nil
 
         if let path = path,
@@ -750,9 +746,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
-        // 如果焦点在标准文本控件上，启用复制/剪切菜单
-        // If focus is on standard text controls, enable copy/cut menu
-        if menuItem.action == #selector(editCopy(_:)) || menuItem.action == #selector(editCut(_:)) {
+        // 如果焦点在标准文本控件上，启用复制/剪切/粘贴/选择全部菜单
+        // If focus is on standard text controls, enable copy/cut/paste/select all menu
+        if menuItem.action == #selector(editCopy(_:)) || menuItem.action == #selector(editCut(_:)) || menuItem.action == #selector(editPaste(_:)) || menuItem.action == #selector(selectAll(_:)) {
             if let firstResponder = NSApp.keyWindow?.firstResponder,
                firstResponder is NSTextView || firstResponder is NSTextField {
                 return true
@@ -766,11 +762,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             }else{
                 return false
             }
-        }
-        // 新建标签页限制最大窗口数量
-        // New tab limited by maximum window count
-        if menuItem.action == #selector(fileNewTab(_:)) && isWindowNumMax() {
-            return false
         }
         // 重新打开关闭的标签页
         // Reopen closed tabs

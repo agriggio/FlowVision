@@ -101,11 +101,6 @@ class CustomOutlineView: NSOutlineView, NSMenuDelegate {
             menu.autoenablesItems = false
             
             let actionItemOpenInNewTab = menu.addItem(withTitle: NSLocalizedString("Open in New Tab", comment: "在新标签页中打开"), action: #selector(actOpenInNewTab), keyEquivalent: "")
-            if isWindowNumMax() {
-                actionItemOpenInNewTab.isEnabled=false
-            }else{
-                actionItemOpenInNewTab.isEnabled=true
-            }
 
             if curRightClickedPath.hasPrefix("file:///VirtualFinderTagsFolder") {
                 
