@@ -237,6 +237,57 @@ extension CGImage {
 //    }
 // }
 
+func isNotFalseTsVideoFile(_ url: URL) -> Bool {
+    if url.pathExtension.lowercased() == "ts" || url.pathExtension.lowercased() == "mts" {
+        return !isProbablyTextFile(url)
+    }
+    return true
+}
+
+func isProbablyTextFile(_ url: URL) -> Bool {
+    let resourceValues = try? url.resourceValues(forKeys: [.fileSizeKey, .isUbiquitousItemKey, .ubiquitousItemDownloadingStatusKey])
+    if let fileSize = resourceValues?.fileSize,
+       fileSize < 100 * 1024 {
+        return true
+    }
+
+    if let isUbiquitousItem = resourceValues?.isUbiquitousItem,
+       isUbiquitousItem,
+       let downloadingStatus = resourceValues?.ubiquitousItemDownloadingStatus,
+       downloadingStatus != .current {
+        return false
+    }
+
+    guard let handle = try? FileHandle(forReadingFrom: url) else {
+        return false
+    }
+    defer { try? handle.close() }
+
+    let data = handle.readData(ofLength: 512)
+    if data.isEmpty { return true }
+
+    if data.starts(with: [0xEF, 0xBB, 0xBF])
+        || data.starts(with: [0xFF, 0xFE])
+        || data.starts(with: [0xFE, 0xFF]) {
+        return true
+    }
+
+    let maxControlByteCount = max(1, data.count / 20)
+    var controlByteCount = 0
+    for byte in data {
+        if byte == 0 {
+            return false
+        }
+        if byte != 9 && byte != 10 && byte != 13 && byte < 32 {
+            controlByteCount += 1
+            if controlByteCount > maxControlByteCount {
+                return false
+            }
+        }
+    }
+    return true
+}
+
 func getFileInfo(file: FileModel) {
     let fileManager = FileManager.default
     do {
@@ -317,7 +368,7 @@ func findImageURLs(in directoryURL: URL, maxDepth: Int, maxImages: Int, preferDi
                         // 每个目录最多收集maxImages张，达到后跳过图片但继续遍历以发现子目录
                         // Collect at most maxImages per directory, skip images after that but continue to discover subdirectories
                         if dirImages.count >= maxImages { continue }
-                        if validExtensions.contains(fileURL.pathExtension.lowercased()) {
+                        if validExtensions.contains(fileURL.pathExtension.lowercased()) && isNotFalseTsVideoFile(fileURL) {
                             dirImages.append(fileURL)
                         }
                     }
@@ -401,7 +452,7 @@ func findImageURLs(in directoryURL: URL, maxDepth: Int, maxImages: Int, preferDi
                     } else {
                         // 检查文件扩展名是否为可生成缩略图的格式
                         // Check if file extension is a format that can generate thumbnails
-                        if validExtensions.contains(fileURL.pathExtension.lowercased()) {
+                        if validExtensions.contains(fileURL.pathExtension.lowercased()) && isNotFalseTsVideoFile(fileURL) {
                             imageUrls.append(fileURL)
 
                             // 检查是否已经找到足够多的图片
@@ -828,7 +879,7 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
                     img = getFileTypeIcon(url: url)
                 }
                 imgs.append(img!)
-                isVideos.append(globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()))
+                isVideos.append(globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()) && isNotFalseTsVideoFile(url))
             }
             if imgs.count>0 {
                 let finalImg=createCompositeImage(background: NSImage(named: NSImage.folderName)!, images: imgs, isVideos: isVideos)
@@ -837,6 +888,10 @@ func getImageThumb(url: URL, size oriSize: NSSize? = nil, refSize: NSSize? = nil
         }
         return NSImage(named: NSImage.folderName)
 
+    }
+
+    if !isNotFalseTsVideoFile(url) {
+        return nil
     }
     
     // 处理不支持的缩略图
@@ -1730,6 +1785,9 @@ func getImageInfo(url: URL, needMetadata: Bool) -> ImageInfo? {
         return getImageInfo(url: resolved, needMetadata: needMetadata)
     }
     // let defaultSize = DEFAULT_SIZE
+    if !isNotFalseTsVideoFile(url) {
+        return nil
+    }
     if globalVar.HandledVideoExtensions.contains(url.pathExtension.lowercased()) {
         if globalVar.HandledNotNativeSupportedVideoExtensions.contains(url.pathExtension.lowercased()){
             if let sizeUseFFmpeg = getVideoResolutionFFmpeg(for: url){

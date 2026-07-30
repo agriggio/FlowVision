@@ -715,6 +715,7 @@ class LargeImageView: NSView {
 
     func playVideo(reload: Bool = false, reloadForAB: Bool = false) {
         guard let viewController = getViewController(self) else { return }
+        guard file.type == .video else { return }
         hideUnsupportedVideoOverlay()
         
         if let url = URL(string: file.path) {
@@ -756,6 +757,8 @@ class LargeImageView: NSView {
             CATransaction.flush()
             let task = DispatchWorkItem { [weak self] in
                 guard let self = self else { return }
+                guard self.file.type == .video,
+                      URL(string: self.file.path) == url else { return }
                 
                 if reload && abPlayPositionA != nil && abPlayPositionB != nil {
                     showInfo(NSLocalizedString("A-B Loop Cancel", comment: "（视频）A-B循环取消"))
@@ -1526,6 +1529,7 @@ class LargeImageView: NSView {
     }
     
     func showUnsupportedVideoOverlay() {
+        guard file.type == .video else { return }
         hideVideoControls()
         unsupportedVideoOverlay.isHidden = false
     }
@@ -2405,6 +2409,8 @@ class LargeImageView: NSView {
         }
         magnificationGesture = nil
         
+        snapshotTimer?.cancel()
+        snapshotTimer = nil
         longPressZoomTimer?.invalidate()
         longPressZoomTimer = nil
         wheelZoomRegenTimer?.invalidate()
