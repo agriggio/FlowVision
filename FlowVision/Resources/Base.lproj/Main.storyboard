@@ -817,6 +817,12 @@ Gw
                                                 <action selector="switchToFitToWindow:" target="Voe-Tx-rLC" id="iyt-Tv-NyG"/>
                                             </connections>
                                         </menuItem>
+                                        <menuItem title="Pixel-Exact Zoom at Integer Scale" id="pxz-01-Zm1">
+                                            <modifierMask key="keyEquivalentModifierMask"/>
+                                            <connections>
+                                                <action selector="togglePixelExactZoom:" target="Voe-Tx-rLC" id="pxz-02-Ac1"/>
+                                            </connections>
+                                        </menuItem>
                                         <menuItem isSeparatorItem="YES" id="RXp-tl-oug"/>
                                         <menuItem title="Justified View" id="rIE-So-qGu">
                                             <modifierMask key="keyEquivalentModifierMask"/>
@@ -955,6 +961,7 @@ Gw
                         <outlet property="maximizeWindowMenuItem" destination="HOx-iw-zko" id="ygq-Rk-ujP"/>
                         <outlet property="onTopMenuItem" destination="aEU-QL-iYf" id="XOy-Dx-Aw4"/>
                         <outlet property="optimizeWindowMenuItem" destination="tmG-gn-Pce" id="iuh-K8-8iB"/>
+                        <outlet property="pixelExactZoomMenuItem" destination="pxz-01-Zm1" id="pxz-03-Ou1"/>
                         <outlet property="reopenClosedTabsMenuItem" destination="zBc-1w-QcQ" id="Xxd-rc-TBq"/>
                         <outlet property="showFinderTagsAndRatingMenuItem" destination="pB9-hf-avc" id="Nr9-Wg-8fN"/>
                         <outlet property="switchToActualSizeMenuItem" destination="pzo-yf-TTx" id="DN8-BG-O7v"/>

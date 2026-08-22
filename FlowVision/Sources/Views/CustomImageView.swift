@@ -250,6 +250,7 @@ class CustomLargeImageView: IntegerImageView {
     }
     
     private func shouldUseNearestMagnification() -> Bool {
+        guard globalVar.pixelExactZoomAtIntegerScale else { return false }
         guard let image = self.image else { return false }
         
         // 当前实际位图的像素尺寸；矢量表示(SVG/PDF)返回0，直接放弃

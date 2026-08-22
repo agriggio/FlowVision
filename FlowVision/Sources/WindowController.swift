@@ -1704,6 +1704,10 @@ extension WindowController: NSToolbarDelegate {
             
             switchToActualSize.state = (viewController.publicVar.isLargeImageFitWindow == false) ? .on : .off
             switchToFitToWindow.state = (viewController.publicVar.isLargeImageFitWindow == true) ? .on : .off
+            
+            let pixelExactZoom = menu.addItem(withTitle: NSLocalizedString("Pixel-Exact Zoom at Integer Scale", comment: "整数倍缩放时像素精确"), action: #selector(togglePixelExactZoom), keyEquivalent: "")
+            pixelExactZoom.keyEquivalentModifierMask = []
+            pixelExactZoom.state = globalVar.pixelExactZoomAtIntegerScale ? .on : .off
         }
 
         menu.addItem(NSMenuItem.separator())
@@ -1822,6 +1826,11 @@ extension WindowController: NSToolbarDelegate {
     @objc func switchToFitToWindow(_ sender: NSMenuItem){
         guard let viewController = contentViewController as? ViewController else {return}
         viewController.switchToFitToWindowForLargeImage()
+    }
+    
+    @objc func togglePixelExactZoom(_ sender: NSMenuItem){
+        guard let viewController = contentViewController as? ViewController else {return}
+        viewController.togglePixelExactZoom()
     }
     
     @objc func switchToSystemTheme(_ sender: NSMenuItem){

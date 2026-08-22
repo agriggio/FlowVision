@@ -190,6 +190,20 @@ extension ViewController {
         UserDefaults.standard.set(publicVar.isPanWhenZoomed, forKey: "isPanWhenZoomed")
     }
 
+    func togglePixelExactZoom(){
+        globalVar.pixelExactZoomAtIntegerScale.toggle()
+        UserDefaults.standard.set(globalVar.pixelExactZoomAtIntegerScale, forKey: "pixelExactZoomAtIntegerScale")
+        // globalVar的变更不会自动到达其它窗口，需要遍历刷新
+        // globalVar changes do not reach other windows automatically, so refresh them all
+        if let appDelegate = NSApplication.shared.delegate as? AppDelegate {
+            for windowController in appDelegate.windowControllers {
+                if let viewController = windowController.contentViewController as? ViewController {
+                    viewController.largeImageView.imageView.updateMagnificationFilter()
+                }
+            }
+        }
+    }
+
     func toggleLockRotation(){
         publicVar.isRotationLocked.toggle()
         UserDefaults.standard.set(publicVar.isRotationLocked, forKey: "isRotationLocked")

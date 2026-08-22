@@ -104,6 +104,7 @@ class GlobalVar{
     var keepFilterStateWhenSwitchFolder = false
     var dirTreeAutoExpand = true
     var largeImageViewShowTagsAndRating = true
+    var pixelExactZoomAtIntegerScale = true
     var enhancedIndexEnabled = true
     var collectionViewItemShowTooltip = true
     

@@ -21,6 +21,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     @IBOutlet weak var detailViewModeMenuItem: NSMenuItem!
     @IBOutlet weak var switchToActualSizeMenuItem: NSMenuItem!
     @IBOutlet weak var switchToFitToWindowMenuItem: NSMenuItem!
+    @IBOutlet weak var pixelExactZoomMenuItem: NSMenuItem!
     @IBOutlet weak var toggleSidebarMenuItem: NSMenuItem!
     @IBOutlet weak var onTopMenuItem: NSMenuItem!
     @IBOutlet weak var maximizeWindowMenuItem: NSMenuItem!
@@ -227,6 +228,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
         }
         if let largeImageViewShowTagsAndRating = UserDefaults.standard.value(forKey: "largeImageViewShowTagsAndRating") as? Bool {
             globalVar.largeImageViewShowTagsAndRating = largeImageViewShowTagsAndRating
+        }
+        if let pixelExactZoomAtIntegerScale = UserDefaults.standard.value(forKey: "pixelExactZoomAtIntegerScale") as? Bool {
+            globalVar.pixelExactZoomAtIntegerScale = pixelExactZoomAtIntegerScale
         }
         if let enhancedIndexEnabled = UserDefaults.standard.value(forKey: "enhancedIndexEnabled") as? Bool {
             globalVar.enhancedIndexEnabled = enhancedIndexEnabled
@@ -718,6 +722,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
             
             switchToActualSizeMenuItem.state = (mainViewController.publicVar.isLargeImageFitWindow == false) ? .on : .off
             switchToFitToWindowMenuItem.state = (mainViewController.publicVar.isLargeImageFitWindow == true) ? .on : .off
+            pixelExactZoomMenuItem.state = globalVar.pixelExactZoomAtIntegerScale ? .on : .off
             
             toggleSidebarMenuItem.state = (mainViewController.publicVar.profile.isDirTreeHidden == false) ? .on : .off
             toggleSidebarMenuItem.keyEquivalent="f"
@@ -1239,6 +1244,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSMenuItemVa
     }
     @IBAction func switchToFitToWindow(_ sender: NSMenuItem){
         getMainViewController()?.switchToFitToWindowForLargeImage()
+    }
+    @IBAction func togglePixelExactZoom(_ sender: NSMenuItem){
+        getMainViewController()?.togglePixelExactZoom()
     }
     
     @IBAction func toggleSidebar(_ sender: NSMenuItem){
