@@ -202,7 +202,84 @@ class CustomLargeImageView: IntegerImageView {
             } else {
                 super.image = newValue
             }
+            updateMagnificationFilter()
         }
+    }
+    
+    // 尺寸变化后重新判断是否为整数倍缩放
+    // Re-evaluate integer-multiple zoom after the size changes
+    override var frame: NSRect {
+        get { return super.frame }
+        set {
+            super.frame = newValue
+            updateMagnificationFilter()
+        }
+    }
+    
+    // 兜底：AppKit 有时直接调用 setFrameSize: 而不经过 frame 属性
+    // Safety net: AppKit sometimes calls setFrameSize: without going through the frame property
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        updateMagnificationFilter()
+    }
+    
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        updateMagnificationFilter()
+    }
+    
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateMagnificationFilter()
+    }
+    
+    // 整数倍(>=1)放大时使用最近邻，即纯像素复制；其余情况保持平滑插值
+    // Use nearest neighbour (pure pixel duplication) at integer magnification (>=1),
+    // keep smooth interpolation in all other cases
+    func updateMagnificationFilter() {
+        guard let layer = self.layer else { return }
+        let desired: CALayerContentsFilter = shouldUseNearestMagnification() ? .nearest : .linear
+        if layer.magnificationFilter != desired {
+            layer.magnificationFilter = desired
+        }
+        // 防御：万一图像内容位于子层
+        // Defensive: in case the image content lives in a sublayer
+        layer.sublayers?.forEach {
+            if $0.magnificationFilter != desired { $0.magnificationFilter = desired }
+        }
+    }
+    
+    private func shouldUseNearestMagnification() -> Bool {
+        guard let image = self.image else { return false }
+        
+        // 当前实际位图的像素尺寸；矢量表示(SVG/PDF)返回0，直接放弃
+        // Pixel size of the bitmap actually installed; vector reps (SVG/PDF) report 0, so bail out
+        var pixelsWide = 0
+        var pixelsHigh = 0
+        for rep in image.representations where rep.pixelsWide > pixelsWide {
+            pixelsWide = rep.pixelsWide
+            pixelsHigh = rep.pixelsHigh
+        }
+        guard pixelsWide > 0 && pixelsHigh > 0 else { return false }
+        
+        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 1
+        // 使用bounds而非frame：frame的getter返回未取整的内部值，bounds才是真正渲染的尺寸
+        // Use bounds rather than frame: the frame getter returns the un-rounded internal value,
+        // while bounds is the size that actually gets rendered
+        let deviceWidth = bounds.width * scale
+        let deviceHeight = bounds.height * scale
+        
+        // 每个源像素占多少设备像素
+        // How many device pixels each source pixel covers
+        let k = (deviceWidth / CGFloat(pixelsWide)).rounded()
+        guard k >= 1 else { return false }
+        
+        // 容差：取整到点最多引入约1个设备像素的误差
+        // Tolerance: rounding the frame to whole points introduces at most ~1 device pixel of error
+        let toleranceW = max(1.0, deviceWidth * 0.0005)
+        let toleranceH = max(1.0, deviceHeight * 0.0005)
+        return abs(deviceWidth - k * CGFloat(pixelsWide)) <= toleranceW
+            && abs(deviceHeight - k * CGFloat(pixelsHigh)) <= toleranceH
     }
     
     // 对当前显示的图像执行翻转（翻转的翻转=还原，无需保存原图）
@@ -210,6 +287,7 @@ class CustomLargeImageView: IntegerImageView {
     func updateMirror() {
         if let img = super.image {
             super.image = img.flippedHorizontally()
+            updateMagnificationFilter()
         }
     }
 }

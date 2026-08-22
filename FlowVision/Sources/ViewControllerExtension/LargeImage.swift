@@ -860,11 +860,11 @@ extension ViewController {
                 doNotGenResized=true
             }
             
-            // 但如果是旋转，还是缩放占用更小
-            // But if rotated, scaling still takes up less space
-            if rotate != 0 {
-                doNotGenResized=false
-            }
+            // 旋转时：缩小仍走缩放（占用更小），放大则直接用原图，
+            // 这样显示层可以做整数倍像素复制，同时避免生成巨大的中间位图
+            // When rotated: downscaling still goes through resizing (smaller footprint),
+            // but when magnifying use the original directly, so the display layer can do
+            // integer pixel duplication and we avoid generating a huge intermediate bitmap
 
             // 如果RAW使用Exif内嵌缩略图，则不使用原图（进行缩放）
             // If RAW uses Exif embedded thumbnail, do not use original image (for scaling)
